@@ -1,0 +1,33 @@
+<table style="width:100%; max-width:600px; margin:0 auto; font-family:Arial, Helvetica, sans-serif; border-collapse:collapse;">
+  <tr>
+    <td style="padding:24px; background-color:#0b3c70; color:#ffffff; text-align:center;">
+      <h1 style="margin:0; font-size:22px;">Welcome to Property UAE</h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px; background-color:#ffffff; color:#1f2933;">
+      <p>Hi {{recipientName}},</p>
+      <p>
+        Thank you for creating a {{accountType}} account with Property UAE. We're excited to help you manage
+        {{#if isOwner}}your property portfolio{{else}}your leasing journey{{/if}} with confidence.
+      </p>
+      {{#if ownerInstructions}}
+      <p>{{ownerInstructions}}</p>
+      {{/if}}
+      <p>
+        You can sign in anytime at <a href="{{dashboardUrl}}" style="color:#0b3c70;">{{dashboardUrl}}</a>
+        using your registered email address.
+      </p>
+      <p style="margin-top:24px;">
+        Regards,<br />
+        Property UAE Team
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:12px 24px; background-color:#f2f7fb; color:#4f5d75; font-size:12px; text-align:center;">
+      This message was sent from Property UAE (noreply@logixcontact.site)
+    </td>
+  </tr>
+</table>
+

@@ -1,0 +1,45 @@
+<table style="width:100%; max-width:600px; margin:0 auto; font-family:Arial, Helvetica, sans-serif; border-collapse:collapse;">
+  <tr>
+    <td style="padding:24px; background-color:#0b3c70; color:#ffffff; text-align:center;">
+      <h1 style="margin:0; font-size:22px;">Owner Application Update</h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px; background-color:#ffffff; color:#1f2933;">
+      <p>Hi {{ownerName}},</p>
+      {{#if isApproved}}
+      <p>
+        Great news! Your Property UAE owner account has been approved. You can now log in and start
+        managing your properties from the owner dashboard.
+      </p>
+      <p>
+        <a href="{{dashboardUrl}}" style="display:inline-block; padding:12px 24px; background-color:#0b3c70; color:#ffffff; text-decoration:none; border-radius:6px;">
+          Open Owner Dashboard
+        </a>
+      </p>
+      {{else}}
+      <p>
+        Thank you for your interest in partnering with Property UAE. After reviewing your submission,
+        we’re unable to approve the application at this time.
+      </p>
+      {{#if rejectionReason}}
+      <p><strong>Reason:</strong> {{rejectionReason}}</p>
+      {{/if}}
+      <p>
+        If you have additional documentation or questions, feel free to reply to this email and our team
+        will be happy to help.
+      </p>
+      {{/if}}
+      <p style="margin-top:24px;">
+        Regards,<br />
+        Property UAE Team
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:12px 24px; background-color:#f2f7fb; color:#4f5d75; font-size:12px; text-align:center;">
+      This message was sent from Property UAE (noreply@logixcontact.site)
+    </td>
+  </tr>
+</table>
+

@@ -1,0 +1,109 @@
+import fs from 'fs';
+import nodemailer, { Transporter } from 'nodemailer';
+import handlebars from 'handlebars';
+import { loadEmailConfig, EmailConfig } from '../../config/email';
+import { emailTemplates, EmailTemplateKey } from './templates';
+
+interface EmailRecipient {
+  name?: string | null;
+  address: string;
+}
+
+interface SendTemplateOptions {
+  to: EmailRecipient | EmailRecipient[];
+  cc?: EmailRecipient | EmailRecipient[];
+  bcc?: EmailRecipient | EmailRecipient[];
+  context: Record<string, any>;
+}
+
+type CompiledTemplate = handlebars.TemplateDelegate<any>;
+
+export class EmailService {
+  private transporter: Transporter | null = null;
+  private emailConfig: EmailConfig | null = null;
+  private templateCache = new Map<string, CompiledTemplate>();
+
+  constructor() {
+    this.emailConfig = loadEmailConfig();
+
+    if (this.emailConfig) {
+      this.transporter = nodemailer.createTransport({
+        host: this.emailConfig.host,
+        port: this.emailConfig.port,
+        secure: this.emailConfig.secure,
+        auth: {
+          user: this.emailConfig.user,
+          pass: this.emailConfig.pass,
+        },
+      });
+    } else {
+      console.warn('Email notifications are disabled (missing SMTP configuration).');
+    }
+  }
+
+  private resolveRecipients(input?: EmailRecipient | EmailRecipient[]) {
+    if (!input) return undefined;
+    const list = Array.isArray(input) ? input : [input];
+    const resolved: Array<string | { name: string; address: string }> = list
+      .filter((recipient) => !!recipient.address)
+      .map((recipient) => {
+        if (recipient.name && recipient.name.trim() !== '') {
+          return {
+            name: recipient.name.trim(),
+            address: recipient.address,
+          };
+        }
+        return recipient.address;
+      });
+
+    return resolved.length > 0 ? resolved : undefined;
+  }
+
+  private getTemplate(templateKey: EmailTemplateKey): CompiledTemplate {
+    if (this.templateCache.has(templateKey)) {
+      return this.templateCache.get(templateKey)!;
+    }
+
+    const templateDef = emailTemplates[templateKey];
+    if (!templateDef) {
+      throw new Error(`Unknown email template: ${templateKey}`);
+    }
+
+    const templateSource = fs.readFileSync(templateDef.file, 'utf8');
+    const compiled = handlebars.compile(templateSource);
+    this.templateCache.set(templateKey, compiled);
+    return compiled;
+  }
+
+  async sendTemplate(templateKey: EmailTemplateKey, options: SendTemplateOptions) {
+    if (!this.transporter || !this.emailConfig) {
+      console.warn(`Skipped sending email for template ${templateKey}: SMTP not configured.`);
+      return;
+    }
+
+    const template = this.getTemplate(templateKey);
+    const templateDef = emailTemplates[templateKey];
+
+    const renderedHtml = template({
+      ...options.context,
+    });
+
+    const subjectTemplate = handlebars.compile(templateDef.subject);
+    const renderedSubject = subjectTemplate(options.context);
+
+    await this.transporter.sendMail({
+      from: {
+        name: this.emailConfig.fromName,
+        address: this.emailConfig.fromEmail,
+      },
+      to: this.resolveRecipients(options.to),
+      cc: this.resolveRecipients(options.cc),
+      bcc: this.resolveRecipients(options.bcc),
+      subject: renderedSubject,
+      html: renderedHtml,
+    });
+  }
+}
+
+export const emailService = new EmailService();
+

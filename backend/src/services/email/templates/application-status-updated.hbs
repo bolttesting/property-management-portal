@@ -1,0 +1,45 @@
+<table style="width:100%; max-width:600px; margin:0 auto; font-family:Arial, Helvetica, sans-serif; border-collapse:collapse;">
+  <tr>
+    <td style="padding:24px; background-color:#0b3c70; color:#ffffff; text-align:center;">
+      <h1 style="margin:0; font-size:22px;">Application Update</h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px; background-color:#ffffff; color:#1f2933;">
+      <p>Hi {{recipientName}},</p>
+      <p>
+        The application for <strong>{{propertyName}}</strong> is now <strong>{{status}}</strong>.
+      </p>
+      {{#if message}}
+      <p>{{message}}</p>
+      {{/if}}
+      {{#if rejectionReason}}
+      <p><strong>Reason:</strong> {{rejectionReason}}</p>
+      {{/if}}
+      {{#if forTenant}}
+      {{#if leaseDetails}}
+      <p>
+        <strong>Lease start:</strong> {{leaseDetails.startDate}}<br />
+        <strong>Lease end:</strong> {{leaseDetails.endDate}}<br />
+        {{#if leaseDetails.rentAmount}}<strong>Rent:</strong> AED {{leaseDetails.rentAmount}}{{/if}}
+      </p>
+      <p>
+        We’ll send over the lease agreement separately. Please review and sign it to confirm.
+      </p>
+      {{/if}}
+      <p>
+        You can view the full application record from your dashboard.
+      </p>
+      <p style="margin-top:24px;">
+        Regards,<br />
+        Property UAE Team
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:12px 24px; background-color:#f2f7fb; color:#4f5d75; font-size:12px; text-align:center;">
+      This notification was sent from Property UAE (noreply@logixcontact.site)
+    </td>
+  </tr>
+</table>
+

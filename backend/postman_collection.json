@@ -1,0 +1,394 @@
+{
+  "info": {
+    "name": "Property Management UAE API",
+    "description": "API collection for Property & Tenancy Management UAE",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "dealer_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenant_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"tenant@test.com\",\n  \"mobile\": \"+971501234567\",\n  \"password\": \"Test123456!\",\n  \"fullName\": \"John Doe\",\n  \"nationality\": \"UAE\",\n  \"employmentStatus\": \"employed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/register/tenant",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "register", "tenant"]
+            }
+          }
+        },
+        {
+          "name": "Register Property Dealer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"dealer@test.com\",\n  \"mobile\": \"+971501234568\",\n  \"password\": \"Test123456!\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"ownerType\": \"management_company\",\n  \"companyName\": \"ABC Property Management\",\n  \"tradeLicenseNumber\": \"TL123456\",\n  \"serviceAreas\": [\"Dubai\", \"Abu Dhabi\"],\n  \"propertyTypes\": [\"apartment\", \"villa\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/register/owner",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "register", "owner"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set(\"token\", jsonData.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@propertymanagementuae.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Properties",
+      "item": [
+        {
+          "name": "Get All Properties (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/properties",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "properties"]
+            }
+          }
+        },
+        {
+          "name": "Get Property by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/properties/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "properties", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Property (Dealer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{dealer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyName\": \"Luxury Apartment Downtown\",\n  \"propertyType\": \"apartment\",\n  \"category\": \"residential\",\n  \"address\": {\n    \"emirate\": \"Dubai\",\n    \"area\": \"Downtown\",\n    \"location\": \"Dubai Downtown\",\n    \"building_name\": \"Burj Tower\",\n    \"apartment_no\": \"101\"\n  },\n  \"description\": \"Beautiful 2BR apartment with sea view\",\n  \"price\": 80000,\n  \"features\": [\"parking\", \"gym\", \"pool\", \"balcony\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/properties",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "properties"]
+            }
+          }
+        },
+        {
+          "name": "Get Dealer Properties (Filtered)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{dealer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/owner/properties?location=Dubai Downtown&status=vacant",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "owner", "properties"],
+              "query": [
+                {
+                  "key": "location",
+                  "value": "Dubai Downtown"
+                },
+                {
+                  "key": "status",
+                  "value": "vacant"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Super Admin",
+      "item": [
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Get Pending Property Dealers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/owners/pending",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "owners", "pending"]
+            }
+          }
+        },
+        {
+          "name": "Approve Property Dealer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/owners/:id/approve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "owners", ":id", "approve"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Properties",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/properties",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "properties"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Property Dealer",
+      "item": [
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{dealer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/owner/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "owner", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Create Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{dealer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newtenant@test.com\",\n  \"mobile\": \"+971501234569\",\n  \"password\": \"Test123456!\",\n  \"fullName\": \"Mike Johnson\",\n  \"nationality\": \"UAE\",\n  \"employmentStatus\": \"employed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/owner/tenants",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "owner", "tenants"]
+            }
+          }
+        },
+        {
+          "name": "Get Tenants",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{dealer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/owner/tenants",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "owner", "tenants"]
+            }
+          }
+        },
+        {
+          "name": "Get Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{dealer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/owner/applications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "owner", "applications"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
