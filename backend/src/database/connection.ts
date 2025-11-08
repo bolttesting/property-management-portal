@@ -3,12 +3,49 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const connectionString = process.env.DATABASE_URL;
+const isTemplateString = connectionString?.includes('${');
+
+let basePoolConfig: PoolConfig;
+
+if (connectionString && !isTemplateString) {
+  basePoolConfig = {
+    connectionString,
+    ssl:
+      process.env.DB_SSL === 'true'
+        ? {
+            rejectUnauthorized:
+              process.env.DB_SSL_REJECT_UNAUTHORIZED === 'false' ? false : true,
+          }
+        : undefined,
+  };
+} else if (process.env.PGHOST) {
+  basePoolConfig = {
+    host: process.env.PGHOST,
+    port: parseInt(process.env.PGPORT || '5432'),
+    database: process.env.PGDATABASE || 'postgres',
+    user: process.env.PGUSER || 'postgres',
+    password: process.env.PGPASSWORD || '',
+    ssl:
+      process.env.PGSSLMODE === 'require' || process.env.PGSSL === 'true'
+        ? {
+            rejectUnauthorized:
+              process.env.DB_SSL_REJECT_UNAUTHORIZED === 'false' ? false : true,
+          }
+        : undefined,
+  };
+} else {
+  basePoolConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    database: process.env.DB_NAME || 'property_management_uae',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || '',
+  };
+}
+
 const poolConfig: PoolConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'property_management_uae',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '',
+  ...basePoolConfig,
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
   connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
