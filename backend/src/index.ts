@@ -46,13 +46,27 @@ app.use(helmet({
 app.use(compression());
 
 // CORS configuration
+const rawFrontendOrigins = process.env.FRONTEND_URL || 'http://localhost:3000';
+const allowedOrigins = rawFrontendOrigins
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`Blocked CORS request from origin: ${origin}`);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Content-Type', 'Content-Length'],
-  // Allow all origins for static files (images)
   optionsSuccessStatus: 200
 }));
 
