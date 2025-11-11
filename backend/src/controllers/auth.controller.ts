@@ -174,12 +174,14 @@ export const registerTenant = async (
     // Generate JWT token
     const token = generateToken(userId, 'tenant');
 
-    await notifications.welcomeEmail({
-      email,
-      name: fullName,
-      accountType: 'tenant',
-      dashboardUrl: 'https://property-management-frontend-production.up.railway.app/tenant/dashboard',
-    });
+    notifications
+      .welcomeEmail({
+        email,
+        name: fullName,
+        accountType: 'tenant',
+        dashboardUrl: 'https://property-management-frontend-production.up.railway.app/tenant/dashboard',
+      })
+      .catch((error) => console.error('Failed to queue welcome email (tenant):', error));
 
     res.status(201).json({
       success: true,
@@ -296,12 +298,14 @@ export const registerOwner = async (
       ]
     );
 
-    await notifications.welcomeEmail({
-      email,
-      name: `${firstName} ${lastName}`.trim(),
-      accountType: 'owner',
-      dashboardUrl: 'https://property-management-frontend-production.up.railway.app/owner/dashboard',
-    });
+    notifications
+      .welcomeEmail({
+        email,
+        name: `${firstName} ${lastName}`.trim(),
+        accountType: 'owner',
+        dashboardUrl: 'https://property-management-frontend-production.up.railway.app/owner/dashboard',
+      })
+      .catch((error) => console.error('Failed to queue welcome email (owner):', error));
 
     res.status(201).json({
       success: true,

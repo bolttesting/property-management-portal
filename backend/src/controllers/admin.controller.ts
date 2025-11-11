@@ -296,12 +296,14 @@ export const approveOwner = async (
 
     // TODO: Send notification email to owner
 
-    await notifications.ownerStatusEmail({
-      email: ownerEmail,
-      name: `${owner.first_name} ${owner.last_name}`.trim(),
-      approved: true,
-      dashboardUrl: 'https://property-management-frontend-production.up.railway.app/owner/dashboard',
-    });
+    notifications
+      .ownerStatusEmail({
+        email: ownerEmail,
+        name: `${owner.first_name} ${owner.last_name}`.trim(),
+        approved: true,
+        dashboardUrl: 'https://property-management-frontend-production.up.railway.app/owner/dashboard',
+      })
+      .catch((error) => console.error('Failed to queue owner approval email:', error));
 
     res.json({
       success: true,

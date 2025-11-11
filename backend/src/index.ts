@@ -37,6 +37,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const API_VERSION = process.env.API_VERSION || 'v1';
 
+// Behind Railway/Vercel proxies
+app.set('trust proxy', 1);
+
 // Security middleware
 // Configure helmet to allow cross-origin resources for images
 app.use(helmet({
