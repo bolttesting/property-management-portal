@@ -31,10 +31,11 @@ if (hasRealConnectionString) {
 } else {
   const host =
     process.env.PGHOST || process.env.DB_HOST || 'localhost';
-  const port = parseInt(
-    process.env.PGPORT || process.env.DB_PORT || '5432',
-    10
-  );
+  const resolvedPort =
+    process.env.PGPORT || process.env.DB_PORT || '5432';
+  const port = Number.isFinite(Number(resolvedPort))
+    ? Number(resolvedPort)
+    : 5432;
   const database =
     process.env.PGDATABASE ||
     process.env.DB_NAME ||
