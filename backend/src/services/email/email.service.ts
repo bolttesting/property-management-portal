@@ -4,6 +4,7 @@ import nodemailer, { Transporter } from 'nodemailer';
 import handlebars from 'handlebars';
 import { loadEmailConfig, EmailConfig } from '../../config/email';
 import { emailTemplates, EmailTemplateKey } from './templates';
+import { resendClient } from './resendClient';
 
 interface EmailRecipient {
   name?: string | null;
@@ -109,11 +110,6 @@ export class EmailService {
   }
 
   async sendTemplate(templateKey: EmailTemplateKey, options: SendTemplateOptions) {
-    if (!this.transporter || !this.emailConfig) {
-      console.warn(`Skipped sending email for template ${templateKey}: SMTP not configured.`);
-      return;
-    }
-
     const template = this.getTemplate(templateKey);
     const templateDef = emailTemplates[templateKey];
 
@@ -123,6 +119,23 @@ export class EmailService {
 
     const subjectTemplate = handlebars.compile(templateDef.subject);
     const renderedSubject = subjectTemplate(options.context);
+
+    if (resendClient && process.env.RESEND_API_KEY) {
+      await resendClient.emails.send({
+        from: `${this.emailConfig?.fromName ?? 'Property UAE Notifications'} <${this.emailConfig?.fromEmail ?? 'onboarding@resend.dev'}>`,
+        to: this.resolveRecipients(options.to),
+        cc: this.resolveRecipients(options.cc),
+        bcc: this.resolveRecipients(options.bcc),
+        subject: renderedSubject,
+        html: renderedHtml,
+      });
+      return;
+    }
+
+    if (!this.transporter || !this.emailConfig) {
+      console.warn(`Skipped sending email for template ${templateKey}: SMTP and Resend not configured.`);
+      return;
+    }
 
     await this.transporter.sendMail({
       from: {
