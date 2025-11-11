@@ -233,10 +233,13 @@ export default function OwnerMovePermitsPage() {
 
     try {
       setUpdatingStatus(true)
-      await ownerAPI.updateMovePermitStatus(selectedPermit.id, {
+      const payload: { status: string; statusReason?: string } = {
         status: statusForm.status,
-        reviewNotes: statusForm.reviewNotes || undefined,
-      })
+      }
+      if (statusForm.reviewNotes.trim()) {
+        payload.statusReason = statusForm.reviewNotes.trim()
+      }
+      await ownerAPI.updateMovePermitStatus(selectedPermit.id, payload)
       toast.success('Permit status updated')
       setShowStatusModal(false)
       setSelectedPermit(null)
