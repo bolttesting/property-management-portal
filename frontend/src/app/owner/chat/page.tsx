@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { chatAPI } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
@@ -38,7 +38,7 @@ interface ChatMessage {
   created_at: string
 }
 
-export default function OwnerChatPage() {
+function OwnerChatPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { isAuthenticated, user, hasHydrated } = useAuthStore()
@@ -381,5 +381,19 @@ export default function OwnerChatPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function OwnerChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+        </div>
+      }
+    >
+      <OwnerChatPageContent />
+    </Suspense>
   )
 }

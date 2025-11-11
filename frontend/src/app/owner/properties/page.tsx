@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { ownerAPI } from '@/lib/api'
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import DashboardNavigation from '@/components/DashboardNavigation'
 
-export default function OwnerPropertiesPage() {
+function OwnerPropertiesPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { isAuthenticated, user, hasHydrated } = useAuthStore()
@@ -389,6 +389,20 @@ export default function OwnerPropertiesPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function OwnerPropertiesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      }
+    >
+      <OwnerPropertiesPageContent />
+    </Suspense>
   )
 }
 
