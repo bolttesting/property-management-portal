@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import nodemailer, { Transporter } from 'nodemailer';
 import handlebars from 'handlebars';
 import { loadEmailConfig, EmailConfig } from '../../config/email';
@@ -69,7 +70,25 @@ export class EmailService {
       throw new Error(`Unknown email template: ${templateKey}`);
     }
 
-    const templateSource = fs.readFileSync(templateDef.file, 'utf8');
+    let templatePath = templateDef.file;
+    if (!fs.existsSync(templatePath)) {
+      const fallbackPath = path.join(
+        __dirname,
+        '../../..',
+        'src',
+        'services',
+        'email',
+        'templates',
+        path.basename(templatePath)
+      );
+      if (fs.existsSync(fallbackPath)) {
+        templatePath = fallbackPath;
+      } else {
+        throw new Error(`Email template file not found: ${templatePath}`);
+      }
+    }
+
+    const templateSource = fs.readFileSync(templatePath, 'utf8');
     const compiled = handlebars.compile(templateSource);
     this.templateCache.set(templateKey, compiled);
     return compiled;
