@@ -88,6 +88,7 @@ export default function TenantDashboard() {
 
   const tenantNavItems = [
     { href: '/tenant/dashboard', label: 'Dashboard' },
+    { href: '/tenant/profile', label: 'Profile' },
     { href: '/tenant/applications', label: 'Applications' },
     { href: '/tenant/favorites', label: 'Favorites' },
     { href: '/tenant/maintenance', label: 'Maintenance' },
@@ -111,7 +112,7 @@ export default function TenantDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
           <button
             onClick={() => router.push('/properties')}
             className="glass rounded-2xl shadow-xl p-6 text-center hover:shadow-2xl transition-all duration-300 bg-white"
@@ -129,6 +130,15 @@ export default function TenantDashboard() {
               <FileText className="h-8 w-8 text-primary" />
             </div>
             <p className="font-semibold text-gray-900">My Applications</p>
+          </button>
+          <button
+            onClick={() => router.push('/tenant/profile')}
+            className="glass rounded-2xl shadow-xl p-6 text-center hover:shadow-2xl transition-all duration-300 bg-white"
+          >
+            <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <UserIcon className="h-8 w-8 text-primary" />
+            </div>
+            <p className="font-semibold text-gray-900">Profile</p>
           </button>
           <button
             onClick={() => router.push('/tenant/favorites')}
