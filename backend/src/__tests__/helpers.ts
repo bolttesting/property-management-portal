@@ -83,7 +83,10 @@ export async function createTestProperty(ownerId: string): Promise<string> {
 
 export async function cleanupTestData(): Promise<void> {
   // Clean up test data in reverse order of dependencies
-  await query('DELETE FROM notifications WHERE user_id LIKE $1', ['test_%']);
+  await query(
+    'DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE email LIKE $1)',
+    ['test_%']
+  );
   await query('DELETE FROM maintenance_request_photos WHERE maintenance_request_id IN (SELECT id FROM maintenance_requests WHERE property_id IN (SELECT id FROM properties WHERE owner_id IN (SELECT id FROM owners WHERE company_name = $1)))', ['Test Company']);
   await query('DELETE FROM maintenance_requests WHERE property_id IN (SELECT id FROM properties WHERE owner_id IN (SELECT id FROM owners WHERE company_name = $1))', ['Test Company']);
   await query('DELETE FROM application_documents WHERE application_id IN (SELECT id FROM applications WHERE tenant_id IN (SELECT id FROM tenants WHERE full_name = $1))', ['Test Tenant']);
@@ -94,6 +97,13 @@ export async function cleanupTestData(): Promise<void> {
   await query('DELETE FROM properties WHERE owner_id IN (SELECT id FROM owners WHERE company_name = $1)', ['Test Company']);
   await query('DELETE FROM tenants WHERE full_name = $1', ['Test Tenant']);
   await query('DELETE FROM owners WHERE company_name = $1', ['Test Company']);
+  const passwordResetTable = await query("SELECT to_regclass('public.password_reset_tokens') AS table_name");
+  if (passwordResetTable.rows[0]?.table_name) {
+    await query(
+      'DELETE FROM password_reset_tokens WHERE user_id IN (SELECT id FROM users WHERE email LIKE $1)',
+      ['test_%']
+    );
+  }
   await query('DELETE FROM users WHERE email LIKE $1', ['test_%']);
 }
 

@@ -67,6 +67,10 @@ export const authAPI = {
     api.put('/auth/profile', data),
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.put('/auth/change-password', data),
+  forgotPassword: (email: string) =>
+    api.post('/auth/forgot-password', { email }),
+  resetPassword: (data: { token: string; password: string; confirmPassword?: string }) =>
+    api.post('/auth/reset-password', data),
   logout: () =>
     api.post('/auth/logout'),
   sendOTP: (mobile: string) =>

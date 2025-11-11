@@ -121,12 +121,20 @@ export default function TenantProfilePage() {
       await authAPI.updateProfile({
         mobile: formData.mobile,
         fullName: fullName || undefined,
+        dateOfBirth: formData.dateOfBirth || undefined,
         nationality: formData.nationality || undefined,
         emiratesId: formData.emiratesId || undefined,
         passportNumber: formData.passportNumber || undefined,
         visaNumber: formData.visaNumber || undefined,
         employmentStatus: formData.employmentStatus || undefined,
         currentAddress: formData.address || undefined,
+        emergencyContact:
+          formData.emergencyContact &&
+          (formData.emergencyContact.name ||
+            formData.emergencyContact.relationship ||
+            formData.emergencyContact.phone)
+            ? formData.emergencyContact
+            : undefined,
       })
       toast.success('Profile updated successfully!')
       loadProfile() // Reload to get updated data

@@ -50,6 +50,24 @@ export const notifications = {
     }
   },
 
+  async passwordResetEmail(options: { email: string; name?: string | null; resetUrl: string; expiresInMinutes?: number }) {
+    if (!options.email) {
+      return;
+    }
+    try {
+      await emailService.sendTemplate('account.passwordReset', {
+        to: { address: options.email, name: options.name ?? undefined },
+        context: {
+          recipientName: options.name || 'there',
+          resetUrl: options.resetUrl,
+          expiresInMinutes: options.expiresInMinutes ?? 60,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to send password reset email:', error);
+    }
+  },
+
   async ownerStatusEmail(options: { email?: string | null; name?: string | null; approved: boolean; reason?: string | null; dashboardUrl?: string }) {
     if (!options.email) return;
     try {

@@ -11,6 +11,8 @@ const migrationFiles = [
   '006_update_chat_rooms_constraint.sql',
   '007_update_leases_contract.sql',
   '008_create_move_permits.sql',
+  '009_add_tenant_profile_fields.sql',
+  '010_create_password_reset_tokens.sql',
 ];
 
 async function run() {

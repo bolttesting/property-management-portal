@@ -5,7 +5,16 @@ import { query } from '../database/connection';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { notifications } from '../services/email/notifications';
+const isValidEmail = (value: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(value);
+};
+
+const isValidMobileLength = (value: string): boolean => {
+  return value.length <= 20;
+};
 
 // Register Tenant
 export const registerTenant = async (
@@ -49,6 +58,12 @@ export const registerTenant = async (
     }
     if (!fullName) {
       throw new AppError('Full name is required', 400);
+    }
+    if (email && !isValidEmail(email)) {
+      throw new AppError('Invalid email format', 400);
+    }
+    if (mobile && !isValidMobileLength(mobile)) {
+      throw new AppError('Mobile number must be 20 characters or fewer', 400);
     }
     // Emirates ID and passport number are optional - can be added later in profile
 
@@ -256,6 +271,12 @@ export const registerOwner = async (
     }
     if (!ownerType) {
       throw new AppError('Owner type is required', 400);
+    }
+    if (email && !isValidEmail(email)) {
+      throw new AppError('Invalid email format', 400);
+    }
+    if (mobile && !isValidMobileLength(mobile)) {
+      throw new AppError('Mobile number must be 20 characters or fewer', 400);
     }
 
     // Check if user already exists
@@ -628,6 +649,8 @@ export const updateProfile = async (
         passportNumber,
         visaNumber,
         currentAddress,
+        dateOfBirth,
+        emergencyContact,
       } = profileData;
 
       const tenantResult = await query('SELECT id FROM tenants WHERE user_id = $1', [userId]);
@@ -642,54 +665,82 @@ export const updateProfile = async (
       if (fullName !== undefined) {
         tenantParamCount++;
         tenantUpdates.push(`full_name = $${tenantParamCount}`);
-        tenantParams.push(fullName);
+        tenantParams.push(fullName || null);
       }
       if (nationality !== undefined) {
         tenantParamCount++;
         tenantUpdates.push(`nationality = $${tenantParamCount}`);
-        tenantParams.push(nationality);
+        tenantParams.push(nationality || null);
       }
       if (employmentStatus !== undefined) {
         tenantParamCount++;
         tenantUpdates.push(`employment_status = $${tenantParamCount}`);
-        tenantParams.push(employmentStatus);
+        tenantParams.push(employmentStatus || null);
       }
       if (emiratesId !== undefined) {
-        // Check if emirates_id is already taken
-        const existingEmiratesId = await query(
-          'SELECT id FROM tenants WHERE emirates_id = $1 AND user_id != $2',
-          [emiratesId, userId]
-        );
-        if (existingEmiratesId.rows.length > 0) {
-          throw new AppError('Emirates ID already in use', 400);
+        const normalizedEmiratesId =
+          typeof emiratesId === 'string' ? emiratesId.trim() : emiratesId;
+        if (normalizedEmiratesId) {
+          const existingEmiratesId = await query(
+            'SELECT id FROM tenants WHERE emirates_id = $1 AND user_id != $2',
+            [normalizedEmiratesId, userId]
+          );
+          if (existingEmiratesId.rows.length > 0) {
+            throw new AppError('Emirates ID already in use', 400);
+          }
         }
         tenantParamCount++;
         tenantUpdates.push(`emirates_id = $${tenantParamCount}`);
-        tenantParams.push(emiratesId);
+        tenantParams.push(normalizedEmiratesId || null);
       }
       if (passportNumber !== undefined) {
         tenantParamCount++;
         tenantUpdates.push(`passport_number = $${tenantParamCount}`);
-        tenantParams.push(passportNumber);
+        tenantParams.push(passportNumber || null);
       }
       if (visaNumber !== undefined) {
         tenantParamCount++;
         tenantUpdates.push(`visa_number = $${tenantParamCount}`);
-        tenantParams.push(visaNumber);
+        tenantParams.push(visaNumber || null);
       }
       if (currentAddress !== undefined) {
         tenantParamCount++;
         tenantUpdates.push(`current_address = $${tenantParamCount}`);
-        tenantParams.push(JSON.stringify(currentAddress));
+        tenantParams.push(currentAddress ? JSON.stringify(currentAddress) : null);
+      }
+      if (dateOfBirth !== undefined) {
+        tenantParamCount++;
+        tenantUpdates.push(`date_of_birth = $${tenantParamCount}`);
+        if (dateOfBirth) {
+          const parsedDate = new Date(dateOfBirth);
+          if (Number.isNaN(parsedDate.getTime())) {
+            throw new AppError('Invalid date of birth', 400);
+          }
+          tenantParams.push(parsedDate.toISOString().split('T')[0]);
+        } else {
+          tenantParams.push(null);
+        }
+      }
+      if (emergencyContact !== undefined) {
+        tenantParamCount++;
+        tenantUpdates.push(`emergency_contact = $${tenantParamCount}`);
+        tenantParams.push(emergencyContact ? JSON.stringify(emergencyContact) : null);
       }
 
       if (tenantUpdates.length > 0) {
         tenantParamCount++;
-        tenantParams.push(tenantResult.rows[0].id);
+        const tenantIdValue = tenantResult.rows[0].id;
+        tenantParams.push(tenantIdValue);
         await query(
           `UPDATE tenants SET ${tenantUpdates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${tenantParamCount}`,
           tenantParams
         );
+
+        const profileCompletion = await calculateTenantProfileCompletion(tenantIdValue);
+        await query('UPDATE tenants SET profile_completion = $1 WHERE id = $2', [
+          profileCompletion,
+          tenantIdValue,
+        ]);
       }
     } else if (userType === 'owner') {
       const {
@@ -862,7 +913,65 @@ export const forgotPassword = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // Placeholder
+    const { email } = req.body;
+
+    if (!email || typeof email !== 'string') {
+      throw new AppError('Email is required', 400);
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const userResult = await query(
+      `SELECT 
+        u.id,
+        u.email,
+        u.user_type,
+        t.full_name AS tenant_name,
+        o.first_name,
+        o.last_name
+      FROM users u
+      LEFT JOIN tenants t ON t.user_id = u.id
+      LEFT JOIN owners o ON o.user_id = u.id
+      WHERE LOWER(u.email) = $1`,
+      [normalizedEmail]
+    );
+
+    if (userResult.rows.length > 0) {
+      const user = userResult.rows[0];
+
+      // Remove existing tokens for this user
+      await query('DELETE FROM password_reset_tokens WHERE user_id = $1 OR expires_at < NOW()', [user.id]);
+
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await query(
+        `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+         VALUES ($1, $2, $3)`,
+        [user.id, tokenHash, expiresAt]
+      );
+
+      const primaryFrontendOrigin =
+        process.env.FRONTEND_URL?.split(',').map((origin) => origin.trim()).filter(Boolean)[0] ||
+        'http://localhost:3000';
+      const resetUrl = `${primaryFrontendOrigin.replace(/\/$/, '')}/auth/reset-password?token=${resetToken}`;
+
+      const displayName =
+        user.tenant_name ||
+        [user.first_name, user.last_name].filter(Boolean).join(' ') ||
+        'there';
+
+      notifications
+        .passwordResetEmail({
+          email: normalizedEmail,
+          name: displayName,
+          resetUrl,
+          expiresInMinutes: 60,
+        })
+        .catch((error) => console.error('Failed to send password reset email:', error));
+    }
+
     res.json({
       success: true,
       message: 'Password reset email sent',
@@ -879,7 +988,60 @@ export const resetPassword = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // Placeholder
+    const { token, password, confirmPassword } = req.body;
+
+    if (!token || typeof token !== 'string') {
+      throw new AppError('Reset token is required', 400);
+    }
+
+    if (!password || typeof password !== 'string') {
+      throw new AppError('New password is required', 400);
+    }
+
+    if (password.length < 8) {
+      throw new AppError('Password must be at least 8 characters', 400);
+    }
+
+    if (confirmPassword !== undefined && password !== confirmPassword) {
+      throw new AppError('Passwords do not match', 400);
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const tokenResult = await query(
+      `SELECT id, user_id, expires_at, used_at
+       FROM password_reset_tokens
+       WHERE token_hash = $1`,
+      [tokenHash]
+    );
+
+    if (tokenResult.rows.length === 0) {
+      throw new AppError('Invalid or expired reset token', 400);
+    }
+
+    const resetRecord = tokenResult.rows[0];
+
+    if (resetRecord.used_at) {
+      throw new AppError('Reset token has already been used', 400);
+    }
+
+    if (new Date(resetRecord.expires_at) < new Date()) {
+      throw new AppError('Reset token has expired', 400);
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [
+      passwordHash,
+      resetRecord.user_id,
+    ]);
+
+    await query('UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE id = $1', [resetRecord.id]);
+    await query('DELETE FROM password_reset_tokens WHERE user_id = $1 AND id != $2', [
+      resetRecord.user_id,
+      resetRecord.id,
+    ]);
+
     res.json({
       success: true,
       message: 'Password reset successfully',
@@ -906,6 +1068,40 @@ export const logout = async (
     next(error);
   }
 };
+
+async function calculateTenantProfileCompletion(tenantId: string): Promise<number> {
+  const result = await query(
+    `SELECT 
+      CASE WHEN full_name IS NOT NULL AND full_name != '' THEN 1 ELSE 0 END as has_name,
+      CASE WHEN nationality IS NOT NULL THEN 1 ELSE 0 END as has_nationality,
+      CASE WHEN employment_status IS NOT NULL THEN 1 ELSE 0 END as has_employment,
+      CASE WHEN emirates_id IS NOT NULL THEN 1 ELSE 0 END as has_emirates_id,
+      CASE WHEN passport_number IS NOT NULL THEN 1 ELSE 0 END as has_passport,
+      CASE WHEN current_address IS NOT NULL THEN 1 ELSE 0 END as has_address,
+      CASE WHEN date_of_birth IS NOT NULL THEN 1 ELSE 0 END as has_dob,
+      CASE WHEN emergency_contact IS NOT NULL THEN 1 ELSE 0 END as has_emergency_contact
+     FROM tenants WHERE id = $1`,
+    [tenantId]
+  );
+
+  if (result.rows.length === 0) {
+    return 0;
+  }
+
+  const row = result.rows[0];
+  const totalFields = 8;
+  const completedFields =
+    parseInt(row.has_name) +
+    parseInt(row.has_nationality) +
+    parseInt(row.has_employment) +
+    parseInt(row.has_emirates_id) +
+    parseInt(row.has_passport) +
+    parseInt(row.has_address) +
+    parseInt(row.has_dob) +
+    parseInt(row.has_emergency_contact);
+
+  return Math.round((completedFields / totalFields) * 100);
+}
 
 // Helper function to generate JWT token
 function generateToken(userId: string, userType: string): string {

@@ -136,7 +136,17 @@ export const updateProfile = async (req: AuthRequest, res: Response, next: NextF
       throw new AppError('Not authenticated', 401);
     }
 
-    const { fullName, nationality, employmentStatus, emiratesId, passportNumber, visaNumber, currentAddress } = req.body;
+    const {
+      fullName,
+      nationality,
+      employmentStatus,
+      emiratesId,
+      passportNumber,
+      visaNumber,
+      currentAddress,
+      dateOfBirth,
+      emergencyContact,
+    } = req.body;
 
     // Get tenant_id
     const tenantResult = await query('SELECT id FROM tenants WHERE user_id = $1', [req.user.id]);
@@ -153,37 +163,66 @@ export const updateProfile = async (req: AuthRequest, res: Response, next: NextF
     if (fullName !== undefined) {
       paramCount++;
       updates.push(`full_name = $${paramCount}`);
-      params.push(fullName);
+      params.push(fullName || null);
     }
     if (nationality !== undefined) {
       paramCount++;
       updates.push(`nationality = $${paramCount}`);
-      params.push(nationality);
+      params.push(nationality || null);
     }
     if (employmentStatus !== undefined) {
       paramCount++;
       updates.push(`employment_status = $${paramCount}`);
-      params.push(employmentStatus);
+      params.push(employmentStatus || null);
     }
     if (emiratesId !== undefined) {
+      const normalizedEmiratesId =
+        typeof emiratesId === 'string' ? emiratesId.trim() : emiratesId;
+      if (normalizedEmiratesId) {
+        const existingEmiratesId = await query(
+          'SELECT id FROM tenants WHERE emirates_id = $1 AND id != $2',
+          [normalizedEmiratesId, tenantId]
+        );
+        if (existingEmiratesId.rows.length > 0) {
+          throw new AppError('Emirates ID already in use', 400);
+        }
+      }
       paramCount++;
       updates.push(`emirates_id = $${paramCount}`);
-      params.push(emiratesId);
+      params.push(normalizedEmiratesId || null);
     }
     if (passportNumber !== undefined) {
       paramCount++;
       updates.push(`passport_number = $${paramCount}`);
-      params.push(passportNumber);
+      params.push(passportNumber || null);
     }
     if (visaNumber !== undefined) {
       paramCount++;
       updates.push(`visa_number = $${paramCount}`);
-      params.push(visaNumber);
+      params.push(visaNumber || null);
     }
     if (currentAddress !== undefined) {
       paramCount++;
       updates.push(`current_address = $${paramCount}`);
-      params.push(JSON.stringify(currentAddress));
+      params.push(currentAddress ? JSON.stringify(currentAddress) : null);
+    }
+    if (dateOfBirth !== undefined) {
+      paramCount++;
+      updates.push(`date_of_birth = $${paramCount}`);
+      if (dateOfBirth) {
+        const parsedDate = new Date(dateOfBirth);
+        if (Number.isNaN(parsedDate.getTime())) {
+          throw new AppError('Invalid date of birth', 400);
+        }
+        params.push(parsedDate.toISOString().split('T')[0]);
+      } else {
+        params.push(null);
+      }
+    }
+    if (emergencyContact !== undefined) {
+      paramCount++;
+      updates.push(`emergency_contact = $${paramCount}`);
+      params.push(emergencyContact ? JSON.stringify(emergencyContact) : null);
     }
 
     if (updates.length === 0) {
@@ -223,7 +262,9 @@ async function calculateProfileCompletion(tenantId: string): Promise<number> {
       CASE WHEN employment_status IS NOT NULL THEN 1 ELSE 0 END as has_employment,
       CASE WHEN emirates_id IS NOT NULL THEN 1 ELSE 0 END as has_emirates_id,
       CASE WHEN passport_number IS NOT NULL THEN 1 ELSE 0 END as has_passport,
-      CASE WHEN current_address IS NOT NULL THEN 1 ELSE 0 END as has_address
+      CASE WHEN current_address IS NOT NULL THEN 1 ELSE 0 END as has_address,
+      CASE WHEN date_of_birth IS NOT NULL THEN 1 ELSE 0 END as has_dob,
+      CASE WHEN emergency_contact IS NOT NULL THEN 1 ELSE 0 END as has_emergency_contact
      FROM tenants WHERE id = $1`,
     [tenantId]
   );
@@ -231,14 +272,16 @@ async function calculateProfileCompletion(tenantId: string): Promise<number> {
   if (result.rows.length === 0) return 0;
 
   const row = result.rows[0];
-  const totalFields = 6;
+  const totalFields = 8;
   const completedFields =
     parseInt(row.has_name) +
     parseInt(row.has_nationality) +
     parseInt(row.has_employment) +
     parseInt(row.has_emirates_id) +
     parseInt(row.has_passport) +
-    parseInt(row.has_address);
+    parseInt(row.has_address) +
+    parseInt(row.has_dob) +
+    parseInt(row.has_emergency_contact);
 
   return Math.round((completedFields / totalFields) * 100);
 }

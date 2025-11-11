@@ -13,11 +13,14 @@ describe('Auth API', () => {
 
   describe('POST /api/v1/auth/register/tenant', () => {
     it('should register a new tenant', async () => {
+      const uniqueSuffix = Math.random().toString().slice(2, 8);
+      const mobile = `+9715${uniqueSuffix}`;
+
       const response = await request(app)
         .post('/api/v1/auth/register/tenant')
         .send({
           email: `test_tenant_${Date.now()}@test.com`,
-          mobile: `+971501234${Date.now()}`,
+          mobile,
           password: 'Test123456!',
           fullName: 'Test Tenant',
           nationality: 'UAE',
@@ -59,11 +62,14 @@ describe('Auth API', () => {
 
   describe('POST /api/v1/auth/register/owner', () => {
     it('should register a new property dealer', async () => {
+      const uniqueSuffix = Math.random().toString().slice(2, 8);
+      const mobile = `+9715${uniqueSuffix}`;
+
       const response = await request(app)
         .post('/api/v1/auth/register/owner')
         .send({
           email: `test_dealer_${Date.now()}@test.com`,
-          mobile: `+971501234${Date.now()}`,
+          mobile,
           password: 'Test123456!',
           firstName: 'Test',
           lastName: 'Dealer',
