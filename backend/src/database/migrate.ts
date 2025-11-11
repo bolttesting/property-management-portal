@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { query, pool } from './connection';
 
@@ -22,10 +22,17 @@ async function runMigrations() {
       console.log(`\n📄 Running migration: ${migrationFile}...`);
       
       // Read migration file
-      const migrationSQL = readFileSync(
-        join(__dirname, 'migrations', migrationFile),
-        'utf-8'
-      );
+      let migrationPath = join(__dirname, 'migrations', migrationFile);
+      if (!existsSync(migrationPath)) {
+        const fallbackPath = join(__dirname, '..', '..', 'src', 'database', 'migrations', migrationFile);
+        if (existsSync(fallbackPath)) {
+          migrationPath = fallbackPath;
+        } else {
+          throw new Error(`Migration file not found: ${migrationFile}`);
+        }
+      }
+
+      const migrationSQL = readFileSync(migrationPath, 'utf-8');
 
       // Execute the entire SQL file at once
       // PostgreSQL can handle multiple statements in one query

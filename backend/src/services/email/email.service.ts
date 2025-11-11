@@ -60,19 +60,20 @@ export class EmailService {
   private resolveRecipients(input?: EmailRecipient | EmailRecipient[]) {
     if (!input) return undefined;
     const list = Array.isArray(input) ? input : [input];
-    const resolved: Array<string | { name: string; address: string }> = list
+    const resolved = list
       .filter((recipient) => !!recipient.address)
       .map((recipient) => {
         if (recipient.name && recipient.name.trim() !== '') {
-          return {
-            name: recipient.name.trim(),
-            address: recipient.address,
-          };
+          return `${recipient.name.trim()} <${recipient.address}>`;
         }
         return recipient.address;
       });
 
-    return resolved.length > 0 ? resolved : undefined;
+    if (resolved.length === 0) {
+      return undefined;
+    }
+
+    return resolved.length === 1 ? resolved[0] : resolved;
   }
 
   private getTemplate(templateKey: EmailTemplateKey): CompiledTemplate {
@@ -129,12 +130,21 @@ export class EmailService {
       this.emailConfig?.fromEmail ??
       'onboarding@resend.dev';
 
+    const to = this.resolveRecipients(options.to);
+    const cc = this.resolveRecipients(options.cc);
+    const bcc = this.resolveRecipients(options.bcc);
+
+    if (!to) {
+      console.warn(`Skipped sending email for template ${templateKey}: no recipients provided.`);
+      return;
+    }
+
     if (resendClient && process.env.RESEND_API_KEY) {
       await resendClient.emails.send({
         from: `${fromName} <${fromEmail}>`,
-        to: this.resolveRecipients(options.to),
-        cc: this.resolveRecipients(options.cc),
-        bcc: this.resolveRecipients(options.bcc),
+        to,
+        cc,
+        bcc,
         subject: renderedSubject,
         html: renderedHtml,
       });
@@ -151,9 +161,9 @@ export class EmailService {
         name: fromName,
         address: fromEmail,
       },
-      to: this.resolveRecipients(options.to),
-      cc: this.resolveRecipients(options.cc),
-      bcc: this.resolveRecipients(options.bcc),
+      to,
+      cc,
+      bcc,
       subject: renderedSubject,
       html: renderedHtml,
     });
