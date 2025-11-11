@@ -40,6 +40,16 @@ export class EmailService {
         tls: {
           rejectUnauthorized: this.emailConfig.rejectUnauthorized,
         },
+        connectionTimeout: 20000,
+        greetingTimeout: 20000,
+        socketTimeout: 20000,
+      });
+      console.log('[Email] Transporter created with config:', {
+        host: this.emailConfig.host,
+        port: this.emailConfig.port,
+        secure: this.emailConfig.secure,
+        requireTLS: this.emailConfig.requireTLS,
+        rejectUnauthorized: this.emailConfig.rejectUnauthorized,
       });
     } else {
       console.warn('Email notifications are disabled (missing SMTP configuration).');
