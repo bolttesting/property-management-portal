@@ -85,6 +85,40 @@ export const notifications = {
     }
   },
 
+  async adminOwnerSignupAlert(options: {
+    adminEmails: Array<{ name?: string | null; email: string }>;
+    ownerName: string;
+    ownerEmail?: string | null;
+    companyName?: string | null;
+    ownerType?: string | null;
+  }) {
+    const recipients = options.adminEmails
+      .filter((admin) => !!admin.email)
+      .map((admin) => ({
+        address: admin.email,
+        name: admin.name ?? undefined,
+      }));
+
+    if (recipients.length === 0) {
+      return;
+    }
+
+    try {
+      await emailService.sendTemplate('admin.ownerSignupAlert', {
+        to: recipients,
+        context: {
+          ownerName: options.ownerName,
+          ownerEmail: options.ownerEmail || 'Not provided',
+          companyName: options.companyName || 'Not provided',
+          ownerType: options.ownerType || 'Not specified',
+          dashboardUrl: 'https://property-management-frontend-production.up.railway.app/admin/owners/pending',
+        },
+      });
+    } catch (error) {
+      console.error('Failed to send admin owner signup alert:', error);
+    }
+  },
+
   async applicationSubmittedOwner(options: {
     ownerEmail?: string | null;
     ownerName?: string | null;

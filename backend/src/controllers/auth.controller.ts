@@ -328,6 +328,18 @@ export const registerOwner = async (
       })
       .catch((error) => console.error('Failed to queue welcome email (owner):', error));
 
+    const superAdminEmail =
+      process.env.SUPER_ADMIN_EMAIL || 'ahmadhasnain6145@gmail.com';
+    notifications
+      .adminOwnerSignupAlert({
+        adminEmails: [{ email: superAdminEmail, name: 'Super Admin' }],
+        ownerName: `${firstName} ${lastName}`.trim(),
+        ownerEmail: email,
+        companyName,
+        ownerType,
+      })
+      .catch((error) => console.error('Failed to queue admin owner signup alert:', error));
+
     res.status(201).json({
       success: true,
       message: 'Owner registration submitted successfully. Please wait for admin approval.',

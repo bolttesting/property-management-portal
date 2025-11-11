@@ -12,6 +12,7 @@ export type EmailTemplateKey =
   | 'movePermit.statusUpdated'
   | 'account.welcome'
   | 'account.passwordReset'
+  | 'admin.ownerSignupAlert'
   | 'owner.statusUpdate'
   | 'application.submitted.owner'
   | 'application.submitted.tenant'
@@ -44,6 +45,10 @@ export const emailTemplates: Record<EmailTemplateKey, TemplateDefinition> = {
   'account.passwordReset': {
     subject: 'Reset your Property UAE password',
     file: path.join(__dirname, 'account-password-reset.hbs'),
+  },
+  'admin.ownerSignupAlert': {
+    subject: 'New property dealer signup: {{ownerName}}',
+    file: path.join(__dirname, 'admin-owner-signup-alert.hbs'),
   },
   'owner.statusUpdate': {
     subject: 'Update on your Property UAE owner application',
