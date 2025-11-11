@@ -178,7 +178,7 @@ export const registerTenant = async (
       email,
       name: fullName,
       accountType: 'tenant',
-      dashboardUrl: 'https://propertyuae.com/tenant/dashboard',
+      dashboardUrl: 'https://property-management-portal-frontend-pi.vercel.app/tenant/dashboard',
     });
 
     res.status(201).json({
@@ -300,7 +300,7 @@ export const registerOwner = async (
       email,
       name: `${firstName} ${lastName}`.trim(),
       accountType: 'owner',
-      dashboardUrl: 'https://propertyuae.com/owner/dashboard',
+      dashboardUrl: 'https://property-management-portal-frontend-pi.vercel.app/owner/dashboard',
     });
 
     res.status(201).json({

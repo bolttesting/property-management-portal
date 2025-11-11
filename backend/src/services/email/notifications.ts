@@ -38,7 +38,7 @@ export const notifications = {
           recipientName: options.name || 'there',
           accountType: options.accountType === 'owner' ? 'property owner' : 'tenant',
           isOwner: options.accountType === 'owner',
-          dashboardUrl: options.dashboardUrl || 'https://propertyuae.com',
+          dashboardUrl: options.dashboardUrl || 'https://property-management-portal-frontend-pi.vercel.app',
           ownerInstructions:
             options.accountType === 'owner'
               ? 'Our admin team will review your submission shortly. We will notify you once the account is approved.'
@@ -59,7 +59,7 @@ export const notifications = {
           ownerName: options.name || 'there',
           isApproved: options.approved,
           rejectionReason: options.reason || null,
-          dashboardUrl: options.dashboardUrl || 'https://propertyuae.com/owner/dashboard',
+          dashboardUrl: options.dashboardUrl || 'https://property-management-portal-frontend-pi.vercel.app/owner/dashboard',
         },
       });
     } catch (error) {

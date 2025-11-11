@@ -300,7 +300,7 @@ export const approveOwner = async (
       email: ownerEmail,
       name: `${owner.first_name} ${owner.last_name}`.trim(),
       approved: true,
-      dashboardUrl: 'https://propertyuae.com/owner/dashboard',
+      dashboardUrl: 'https://property-management-portal-frontend-pi.vercel.app/owner/dashboard',
     });
 
     res.json({
