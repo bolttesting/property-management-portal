@@ -26,6 +26,10 @@ function RegisterForm() {
     lastName: '',
     companyName: '',
     ownerType: 'management_company',
+    nationality: '',
+    employmentStatus: '',
+    emiratesId: '',
+    passportNumber: '',
   })
   const [loading, setLoading] = useState(false)
 
