@@ -52,9 +52,14 @@ const allowedOrigins = rawFrontendOrigins
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+console.log('CORS allowed origins:', allowedOrigins);
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) {
+      return callback(null, true);
+    }
+    if (origin === 'null') {
       return callback(null, true);
     }
     if (allowedOrigins.includes(origin)) {
