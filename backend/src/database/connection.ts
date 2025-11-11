@@ -4,8 +4,27 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const connectionString = process.env.DATABASE_URL;
-const hasRealConnectionString =
-  !!connectionString && !connectionString.includes('${');
+const hasRealConnectionString = (() => {
+  if (!connectionString) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(connectionString);
+
+    if (!parsed.protocol.startsWith('postgres')) {
+      return false;
+    }
+
+    if (!parsed.port) {
+      return true;
+    }
+
+    return Number.isFinite(Number(parsed.port));
+  } catch {
+    return false;
+  }
+})();
 
 const buildSslConfig = () =>
   process.env.PGSSLMODE === 'require' ||
@@ -33,9 +52,8 @@ if (hasRealConnectionString) {
     process.env.PGHOST || process.env.DB_HOST || 'localhost';
   const resolvedPort =
     process.env.PGPORT || process.env.DB_PORT || '5432';
-  const port = Number.isFinite(Number(resolvedPort))
-    ? Number(resolvedPort)
-    : 5432;
+  const parsedPort = Number.parseInt(resolvedPort, 10);
+  const port = Number.isNaN(parsedPort) ? 5432 : parsedPort;
   const database =
     process.env.PGDATABASE ||
     process.env.DB_NAME ||
