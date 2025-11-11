@@ -32,9 +32,13 @@ export class EmailService {
         host: this.emailConfig.host,
         port: this.emailConfig.port,
         secure: this.emailConfig.secure,
+        requireTLS: this.emailConfig.requireTLS,
         auth: {
           user: this.emailConfig.user,
           pass: this.emailConfig.pass,
+        },
+        tls: {
+          rejectUnauthorized: this.emailConfig.rejectUnauthorized,
         },
       });
     } else {

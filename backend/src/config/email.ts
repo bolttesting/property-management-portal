@@ -8,6 +8,8 @@ export interface EmailConfig {
   host: string;
   port: number;
   secure: boolean;
+  requireTLS: boolean;
+  rejectUnauthorized: boolean;
   user: string;
   pass: string;
   fromName: string;
@@ -22,7 +24,7 @@ export const loadEmailConfig = (): EmailConfig | null => {
   }
 
   const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT;
+  const port = process.env.SMTP_PORT ?? '587';
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
@@ -37,7 +39,9 @@ export const loadEmailConfig = (): EmailConfig | null => {
     enabled: true,
     host,
     port: Number(port),
-    secure: parseBoolean(process.env.SMTP_SECURE, true),
+    secure: parseBoolean(process.env.SMTP_SECURE, false),
+    requireTLS: parseBoolean(process.env.SMTP_REQUIRE_TLS, true),
+    rejectUnauthorized: parseBoolean(process.env.SMTP_TLS_REJECT_UNAUTHORIZED, true),
     user,
     pass,
     fromName: process.env.SMTP_FROM_NAME ?? 'Property UAE Notifications',
