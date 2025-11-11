@@ -57,6 +57,7 @@ if (hasRealConnectionString) {
     connectionTimeoutMillis: 2000,
   };
 
+  console.log(`[DB] Using connection pool host=${host} port=${port}`);
   pool = new Pool(poolConfig);
 }
 
