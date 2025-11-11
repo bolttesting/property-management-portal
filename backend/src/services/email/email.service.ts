@@ -120,9 +120,18 @@ export class EmailService {
     const subjectTemplate = handlebars.compile(templateDef.subject);
     const renderedSubject = subjectTemplate(options.context);
 
+    const fromName =
+      process.env.RESEND_FROM_NAME ??
+      this.emailConfig?.fromName ??
+      'Property UAE Notifications';
+    const fromEmail =
+      process.env.RESEND_FROM_EMAIL ??
+      this.emailConfig?.fromEmail ??
+      'onboarding@resend.dev';
+
     if (resendClient && process.env.RESEND_API_KEY) {
       await resendClient.emails.send({
-        from: `${this.emailConfig?.fromName ?? 'Property UAE Notifications'} <${this.emailConfig?.fromEmail ?? 'onboarding@resend.dev'}>`,
+        from: `${fromName} <${fromEmail}>`,
         to: this.resolveRecipients(options.to),
         cc: this.resolveRecipients(options.cc),
         bcc: this.resolveRecipients(options.bcc),
@@ -139,8 +148,8 @@ export class EmailService {
 
     await this.transporter.sendMail({
       from: {
-        name: this.emailConfig.fromName,
-        address: this.emailConfig.fromEmail,
+        name: fromName,
+        address: fromEmail,
       },
       to: this.resolveRecipients(options.to),
       cc: this.resolveRecipients(options.cc),
