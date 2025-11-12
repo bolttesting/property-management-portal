@@ -46,7 +46,17 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginEmbedderPolicy: false
 }));
-app.use(compression());
+// Compression middleware - skip images for iOS Safari compatibility
+app.use(compression({
+  filter: (req, res) => {
+    // Don't compress images (iOS Safari can have issues)
+    if (req.path && /\.(jpg|jpeg|png|gif|webp|svg|ico)$/i.test(req.path)) {
+      return false;
+    }
+    // Use default compression filter for other files
+    return compression.filter(req, res);
+  }
+}));
 
 // CORS configuration
 const rawFrontendOrigins = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -125,12 +135,19 @@ console.log('Static files will be available at: http://localhost:5000/uploads/..
 // Serve static files with proper CORS headers
 // IMPORTANT: This must come BEFORE the general CORS middleware to ensure proper headers
 app.use('/uploads', (req, res, next) => {
+  // Skip compression for images (iOS Safari can have issues with compressed images)
+  const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(req.path);
+  if (isImage) {
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+    res.setHeader('Accept-Ranges', 'bytes'); // Important for iOS Safari
+  }
+  
   // Handle OPTIONS preflight requests
   if (req.method === 'OPTIONS') {
     res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for static files
     res.header('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Range');
-    res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type');
+    res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, Accept-Ranges');
     res.sendStatus(200);
     return;
   }
@@ -138,7 +155,7 @@ app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for static files
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Range');
-  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type');
+  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, Accept-Ranges');
   res.header('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 }, express.static(uploadsPath, {
@@ -153,7 +170,14 @@ app.use('/uploads', (req, res, next) => {
       res.setHeader('Content-Type', 'image/png');
     } else if (filePath.endsWith('.webp')) {
       res.setHeader('Content-Type', 'image/webp');
+    } else if (filePath.endsWith('.gif')) {
+      res.setHeader('Content-Type', 'image/gif');
+    } else if (filePath.endsWith('.svg')) {
+      res.setHeader('Content-Type', 'image/svg+xml');
     }
+    // Important headers for iOS Safari
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     // Log static file requests in development
     if (process.env.NODE_ENV === 'development') {
       console.log(`Serving static file: ${filePath}`);
