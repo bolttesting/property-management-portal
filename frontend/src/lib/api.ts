@@ -95,6 +95,8 @@ export const propertiesAPI = {
     api.delete(`/properties/${id}`),
   addImages: (id: string, data: any) =>
     api.post(`/properties/${id}/images`, data),
+  deleteImage: (propertyId: string, imageId: string) =>
+    api.delete(`/properties/${propertyId}/images/${imageId}`),
   addToFavorites: (id: string) =>
     api.post(`/properties/${id}/favorite`),
   removeFromFavorites: (id: string) =>

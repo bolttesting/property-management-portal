@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { propertiesAPI, uploadAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Upload, X, Image as ImageIcon, Video } from 'lucide-react'
+import { getImageUrl } from '@/utils/imageUtils'
 
 export default function EditPropertyPage() {
   const router = useRouter()
@@ -222,9 +223,35 @@ export default function EditPropertyPage() {
     }
   }
 
-  const removeImage = (index: number) => {
+  const removeImage = async (index: number) => {
+    const imageUrl = images[index]
+    const existingImage = existingImages.find((img) => img.image_url === imageUrl)
+    
+    // If it's an existing image (has database record), delete it from backend
+    if (existingImage && existingImage.id) {
+      try {
+        await propertiesAPI.deleteImage(params.id as string, existingImage.id)
+        toast.success('Image deleted successfully')
+        
+        // Remove from existingImages state
+        const newExistingImages = existingImages.filter((img) => img.id !== existingImage.id)
+        setExistingImages(newExistingImages)
+      } catch (error: any) {
+        console.error('Failed to delete image:', error)
+        const errorMessage = error.response?.data?.error?.message || 
+                            error.response?.data?.message || 
+                            error.message || 
+                            'Failed to delete image'
+        toast.error(errorMessage)
+        return // Don't remove from UI if deletion failed
+      }
+    }
+    
+    // Remove from images array (works for both existing and new images)
     const newImages = images.filter((_, i) => i !== index)
     setImages(newImages)
+    
+    // Update primary image index
     if (primaryImageIndex === index) {
       setPrimaryImageIndex(newImages.length > 0 ? 0 : null)
     } else if (primaryImageIndex !== null && primaryImageIndex > index) {
@@ -768,7 +795,7 @@ export default function EditPropertyPage() {
                     {images.map((imageUrl, index) => (
                       <div key={index} className="relative group">
                         <img
-                          src={`http://localhost:5000${imageUrl}`}
+                          src={getImageUrl(imageUrl)}
                           alt={`Property ${index + 1}`}
                           className="w-full h-32 object-cover rounded-lg border-2 border-border"
                         />
