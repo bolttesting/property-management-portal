@@ -267,13 +267,26 @@ app.get('/health', (req, res) => {
   const resolvedUploadDir = path.resolve(uploadDir);
   const imagesDir = path.join(resolvedUploadDir, 'images');
   
+  // Get base URL for links
+  const protocol = req.protocol;
+  const host = req.get('host');
+  const baseUrl = `${protocol}://${host}`;
+  
   const storageInfo = {
     uploadDir: resolvedUploadDir,
     imagesDir: imagesDir,
     exists: fs.existsSync(resolvedUploadDir),
     writable: false,
     railwayVolume: process.env.RAILWAY_VOLUME_MOUNT_PATH || null,
-    uploadDirEnv: process.env.UPLOAD_DIR || null
+    uploadDirEnv: process.env.UPLOAD_DIR || null,
+    // Add helpful links
+    links: {
+      uploads: `${baseUrl}/uploads`,
+      images: `${baseUrl}/uploads/images`,
+      documents: `${baseUrl}/uploads/documents`,
+      api: `${baseUrl}/api/${API_VERSION}`,
+      health: `${baseUrl}/health`
+    }
   };
   
   try {
@@ -284,11 +297,32 @@ app.get('/health', (req, res) => {
     storageInfo.writable = false;
   }
   
+  // Count files in images directory (if it exists)
+  let imageCount = 0;
+  if (fs.existsSync(imagesDir)) {
+    try {
+      const files = fs.readdirSync(imagesDir);
+      imageCount = files.filter((file: string) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file)).length;
+    } catch (error) {
+      // Ignore errors reading directory
+    }
+  }
+  storageInfo.imageCount = imageCount;
+  
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
     storage: storageInfo,
-    database: 'connected' // You can enhance this to check DB connection
+    database: 'connected', // You can enhance this to check DB connection
+    // Add helpful links for quick access
+    links: {
+      health: `${baseUrl}/health`,
+      api: `${baseUrl}/api/${API_VERSION}`,
+      uploads: `${baseUrl}/uploads`,
+      images: `${baseUrl}/uploads/images`,
+      docs: `${baseUrl}/api/${API_VERSION}/docs` // If you add API docs later
+    }
   });
 });
 
