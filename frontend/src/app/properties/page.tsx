@@ -244,7 +244,7 @@ function PropertiesPageContent() {
             </div>
           </div>
           <div className="border-t border-primary mt-8 pt-8 text-center text-primary-light">
-            <p>&copy; 2024 Property &amp; Tenancy Management UAE. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Property &amp; Tenancy Management UAE. All rights reserved.</p>
             <p className="mt-2">
               Designed and developed by{' '}
               <a href="https://muhammadahmad.io" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">

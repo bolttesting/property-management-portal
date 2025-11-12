@@ -53,12 +53,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   return (
     <div className="property-card fade-in">
       {/* Image Container */}
-      <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+      <div className="relative h-48 sm:h-56 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
         {property.primary_image ? (
           <img
             src={getImageUrl(property.primary_image)}
             alt={property.property_name}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+            loading="lazy"
             onError={(e) => {
               console.error('PropertyCard image load error:', {
                 attemptedUrl: e.currentTarget.src,
@@ -66,6 +67,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                 propertyId: property.id,
                 error: 'Image failed to load'
               })
+              // Hide the image and show placeholder
               e.currentTarget.style.display = 'none'
               e.currentTarget.onerror = null
               const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder') as HTMLElement
@@ -75,6 +77,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             }}
             onLoad={(e) => {
               console.log('PropertyCard image loaded successfully:', e.currentTarget.src)
+              // Hide placeholder when image loads
               const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder') as HTMLElement
               if (placeholder) {
                 placeholder.style.display = 'none'
@@ -84,29 +87,32 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         ) : null}
         
         {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
         
-        {/* Placeholder */}
-        <div className="image-placeholder absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200" style={{ display: property.primary_image ? 'none' : 'flex' }}>
+        {/* Placeholder - shown when no image or image fails to load */}
+        <div 
+          className="image-placeholder absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 z-0"
+          style={{ display: property.primary_image ? 'none' : 'flex' }}
+        >
           <div className="text-center">
-            <MapPin className="h-16 w-16 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">No Image</p>
+            <MapPin className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-2" />
+            <p className="text-xs sm:text-sm text-gray-500">No Image</p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-          <button className="bg-white/95 backdrop-blur-sm hover:bg-white rounded-full p-2.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110">
-            <Heart className="h-5 w-5 text-gray-700 hover:text-red-500 transition-colors" />
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-10">
+          <button className="bg-white/95 backdrop-blur-sm hover:bg-white rounded-full p-2 sm:p-2.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110">
+            <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-gray-700 hover:text-red-500 transition-colors" />
           </button>
-          <button className="bg-white/95 backdrop-blur-sm hover:bg-white rounded-full p-2.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110">
-            <Share2 className="h-5 w-5 text-gray-700 hover:text-primary transition-colors" />
+          <button className="bg-white/95 backdrop-blur-sm hover:bg-white rounded-full p-2 sm:p-2.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110">
+            <Share2 className="h-4 w-4 sm:h-5 sm:w-5 text-gray-700 hover:text-primary transition-colors" />
           </button>
         </div>
 
         {/* Status Badge */}
-        <div className="absolute bottom-4 left-4">
-          <span className={`text-xs px-4 py-1.5 rounded-full font-semibold shadow-lg backdrop-blur-sm ${statusColors[property.status] || 'bg-gray-700 text-white'}`}>
+        <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 z-10">
+          <span className={`text-xs px-3 py-1 sm:px-4 sm:py-1.5 rounded-full font-semibold shadow-lg backdrop-blur-sm ${statusColors[property.status] || 'bg-gray-700 text-white'}`}>
             {property.status.charAt(0).toUpperCase() + property.status.slice(1).replace('_', ' ')}
           </span>
         </div>

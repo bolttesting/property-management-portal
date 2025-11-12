@@ -441,22 +441,25 @@ export default function PropertyDetailsPage() {
               {images.length > 0 ? (
                 <div>
                   {/* Main Image */}
-                  <div className="relative h-[500px] md:h-[600px] bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden group">
+                  <div className="relative h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden group">
                     <img
                       src={getImageUrl(images[selectedImageIndex]?.image_url || primaryImage?.image_url || images[0]?.image_url)}
                       alt={property.property_name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      loading="eager"
                       onError={(e) => {
                         console.error('Main image load error:', {
                           attemptedUrl: e.currentTarget.src,
                           imageUrl: images[selectedImageIndex]?.image_url || primaryImage?.image_url || images[0]?.image_url,
                           imagesArray: images
                         })
-                        e.currentTarget.style.display = 'none'
+                        // Don't hide the image on mobile - show a fallback background
+                        e.currentTarget.style.opacity = '0.5'
                         e.currentTarget.onerror = null
                       }}
                       onLoad={(e) => {
                         console.log('Main image loaded successfully:', e.currentTarget.src)
+                        e.currentTarget.style.opacity = '1'
                       }}
                     />
                     {images.length > 1 && (
@@ -464,18 +467,20 @@ export default function PropertyDetailsPage() {
                         {/* Navigation Arrows */}
                         <button
                           onClick={() => setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))}
-                          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/95 backdrop-blur-sm hover:bg-white rounded-full p-3 shadow-xl hover:shadow-2xl transition-all duration-300 z-10 hover:scale-110"
+                          className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/95 backdrop-blur-sm hover:bg-white rounded-full p-2 sm:p-3 shadow-xl hover:shadow-2xl transition-all duration-300 z-10 hover:scale-110 touch-manipulation"
+                          aria-label="Previous image"
                         >
-                          <ChevronLeft className="h-6 w-6 text-gray-800" />
+                          <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-800" />
                         </button>
                         <button
                           onClick={() => setSelectedImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))}
-                          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/95 backdrop-blur-sm hover:bg-white rounded-full p-3 shadow-xl hover:shadow-2xl transition-all duration-300 z-10 hover:scale-110"
+                          className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/95 backdrop-blur-sm hover:bg-white rounded-full p-2 sm:p-3 shadow-xl hover:shadow-2xl transition-all duration-300 z-10 hover:scale-110 touch-manipulation"
+                          aria-label="Next image"
                         >
-                          <ChevronRight className="h-6 w-6 text-gray-800" />
+                          <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-800" />
                         </button>
                         {/* Image Counter */}
-                        <div className="absolute bottom-6 right-6 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+                        <div className="absolute bottom-3 right-3 sm:bottom-6 sm:right-6 bg-black/70 backdrop-blur-sm text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-semibold shadow-lg">
                           {selectedImageIndex + 1} / {images.length}
                         </div>
                       </>
@@ -483,33 +488,37 @@ export default function PropertyDetailsPage() {
                   </div>
                   {/* Thumbnails */}
                   {images.length > 1 && (
-                    <div className="p-4 bg-white border-t border-gray-100">
-                      <div className="flex gap-3 overflow-x-auto pb-2">
+                    <div className="p-3 sm:p-4 bg-white border-t border-gray-100">
+                      <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
                         {images.map((img: any, index: number) => (
                           <button
                             key={img.id || index}
                             onClick={() => setSelectedImageIndex(index)}
-                            className={`flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 transition-all duration-300 hover:scale-105 ${
+                            className={`flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 transition-all duration-300 hover:scale-105 touch-manipulation ${
                               selectedImageIndex === index
                                 ? 'border-primary shadow-lg ring-2 ring-primary/20'
                                 : 'border-gray-200 hover:border-primary/50'
                             }`}
+                            aria-label={`View image ${index + 1}`}
                           >
                             <img
                               src={getImageUrl(img.image_url)}
                               alt={`${property.property_name} ${index + 1}`}
                               className="w-full h-full object-cover"
+                              loading="lazy"
                               onError={(e) => {
                                 console.error('Thumbnail load error:', {
                                   attemptedUrl: e.currentTarget.src,
                                   imageUrl: img.image_url,
                                   imageId: img.id
                                 })
-                                e.currentTarget.style.display = 'none'
+                                // Show a placeholder instead of hiding
+                                e.currentTarget.style.opacity = '0.3'
                                 e.currentTarget.onerror = null
                               }}
                               onLoad={(e) => {
                                 console.log('Thumbnail loaded successfully:', e.currentTarget.src)
+                                e.currentTarget.style.opacity = '1'
                               }}
                             />
                           </button>
@@ -519,10 +528,10 @@ export default function PropertyDetailsPage() {
                   )}
                 </div>
               ) : (
-                <div className="h-[500px] bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                <div className="h-[300px] sm:h-[400px] md:h-[500px] bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
                   <div className="text-center">
-                    <MapPin className="h-20 w-20 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 font-medium">No images available</p>
+                    <MapPin className="h-16 w-16 sm:h-20 sm:w-20 text-gray-400 mx-auto mb-4" />
+                    <p className="text-sm sm:text-base text-gray-500 font-medium">No images available</p>
                   </div>
                 </div>
               )}
