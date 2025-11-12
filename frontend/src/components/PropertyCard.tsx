@@ -48,12 +48,22 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     // Ensure image path starts with slash
     const imagePath = imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl
     const fullUrl = `${backendUrl}${imagePath}`
-    console.log('PropertyCard: Constructed image URL:', {
-      original: imageUrl,
-      apiUrl,
-      backendUrl,
-      fullUrl
-    })
+    
+    // Log for debugging (especially useful for iOS)
+    if (typeof window !== 'undefined') {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      if (isIOS) {
+        console.log('PropertyCard [iOS]: Constructed image URL:', {
+          original: imageUrl,
+          apiUrl,
+          backendUrl,
+          fullUrl,
+          isHTTPS: fullUrl.startsWith('https://')
+        })
+      }
+    }
+    
     return fullUrl
   }
 
@@ -66,23 +76,15 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             src={getImageUrl(property.primary_image)}
             alt={property.property_name}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-            crossOrigin="anonymous"
             decoding="async"
-            referrerPolicy="no-referrer-when-downgrade"
             onError={(e) => {
               const img = e.currentTarget
-              // If crossOrigin failed, try without it (iOS Safari fallback)
-              if (img.crossOrigin && img.crossOrigin !== '') {
-                console.warn('PropertyCard: Image failed with crossOrigin, retrying without it:', img.src)
-                img.crossOrigin = ''
-                img.src = img.src // Force reload
-                return
-              }
               console.error('PropertyCard image load error:', {
                 attemptedUrl: img.src,
                 imageUrl: property.primary_image,
                 propertyId: property.id,
-                error: 'Image failed to load'
+                error: 'Image failed to load',
+                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
               })
               // Hide the image and show placeholder
               img.style.display = 'none'

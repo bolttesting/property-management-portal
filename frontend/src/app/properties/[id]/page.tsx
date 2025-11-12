@@ -182,7 +182,24 @@ export default function PropertyDetailsPage() {
     backendUrl = backendUrl.replace(/\/$/, '')
     // Ensure image path starts with slash
     const imagePath = imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl
-    return `${backendUrl}${imagePath}`
+    const fullUrl = `${backendUrl}${imagePath}`
+    
+    // Log for debugging (especially useful for iOS)
+    if (typeof window !== 'undefined') {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      if (isIOS) {
+        console.log('PropertyDetails [iOS]: Constructed image URL:', {
+          original: imageUrl,
+          apiUrl,
+          backendUrl,
+          fullUrl,
+          isHTTPS: fullUrl.startsWith('https://')
+        })
+      }
+    }
+    
+    return fullUrl
   }
 
   const primaryImage = images.find((img: any) => img.is_primary) || images[0]
@@ -454,22 +471,14 @@ export default function PropertyDetailsPage() {
                       src={getImageUrl(images[selectedImageIndex]?.image_url || primaryImage?.image_url || images[0]?.image_url)}
                       alt={property.property_name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      crossOrigin="anonymous"
                       decoding="async"
-                      referrerPolicy="no-referrer-when-downgrade"
                       onError={(e) => {
                         const img = e.currentTarget
-                        // If crossOrigin failed, try without it (iOS Safari fallback)
-                        if (img.crossOrigin && img.crossOrigin !== '') {
-                          console.warn('Main image: Failed with crossOrigin, retrying without it:', img.src)
-                          img.crossOrigin = ''
-                          img.src = img.src // Force reload
-                          return
-                        }
                         console.error('Main image load error:', {
                           attemptedUrl: img.src,
                           imageUrl: images[selectedImageIndex]?.image_url || primaryImage?.image_url || images[0]?.image_url,
-                          imagesArray: images
+                          imagesArray: images,
+                          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
                         })
                         // Don't hide the image on mobile - show a fallback background
                         img.style.opacity = '0.5'
@@ -523,22 +532,14 @@ export default function PropertyDetailsPage() {
                               src={getImageUrl(img.image_url)}
                               alt={`${property.property_name} ${index + 1}`}
                               className="w-full h-full object-cover"
-                              crossOrigin="anonymous"
                               decoding="async"
-                              referrerPolicy="no-referrer-when-downgrade"
                               onError={(e) => {
                                 const imgEl = e.currentTarget
-                                // If crossOrigin failed, try without it (iOS Safari fallback)
-                                if (imgEl.crossOrigin && imgEl.crossOrigin !== '') {
-                                  console.warn('Thumbnail: Failed with crossOrigin, retrying without it:', imgEl.src)
-                                  imgEl.crossOrigin = ''
-                                  imgEl.src = imgEl.src // Force reload
-                                  return
-                                }
                                 console.error('Thumbnail load error:', {
                                   attemptedUrl: imgEl.src,
                                   imageUrl: img.image_url,
-                                  imageId: img.id
+                                  imageId: img.id,
+                                  userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
                                 })
                                 // Show a placeholder instead of hiding
                                 imgEl.style.opacity = '0.3'
