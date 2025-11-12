@@ -472,14 +472,35 @@ export default function PropertyDetailsPage() {
                       alt={property.property_name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       decoding="async"
+                      loading="eager"
+                      fetchPriority="high"
                       onError={(e) => {
                         const img = e.currentTarget
+                        const imageUrl = getImageUrl(images[selectedImageIndex]?.image_url || primaryImage?.image_url || images[0]?.image_url)
                         console.error('Main image load error:', {
                           attemptedUrl: img.src,
                           imageUrl: images[selectedImageIndex]?.image_url || primaryImage?.image_url || images[0]?.image_url,
+                          constructedUrl: imageUrl,
                           imagesArray: images,
                           userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
                         })
+                        
+                        // Try reloading the image once (iOS Safari sometimes needs a retry)
+                        if (!img.dataset.retried) {
+                          img.dataset.retried = 'true'
+                          const newImg = new Image()
+                          newImg.onload = () => {
+                            img.src = imageUrl
+                            img.style.opacity = '1'
+                          }
+                          newImg.onerror = () => {
+                            img.style.opacity = '0.5'
+                            img.onerror = null
+                          }
+                          newImg.src = imageUrl
+                          return
+                        }
+                        
                         // Don't hide the image on mobile - show a fallback background
                         img.style.opacity = '0.5'
                         img.onerror = null

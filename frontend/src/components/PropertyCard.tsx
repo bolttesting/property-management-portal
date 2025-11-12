@@ -77,15 +77,41 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             alt={property.property_name}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
             decoding="async"
+            loading="eager"
+            fetchPriority="high"
             onError={(e) => {
               const img = e.currentTarget
+              const imageUrl = getImageUrl(property.primary_image)
               console.error('PropertyCard image load error:', {
                 attemptedUrl: img.src,
                 imageUrl: property.primary_image,
+                constructedUrl: imageUrl,
                 propertyId: property.id,
                 error: 'Image failed to load',
                 userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
               })
+              
+              // Try reloading the image once (iOS Safari sometimes needs a retry)
+              if (!img.dataset.retried) {
+                img.dataset.retried = 'true'
+                const newImg = new Image()
+                newImg.onload = () => {
+                  img.src = imageUrl
+                  img.style.display = ''
+                }
+                newImg.onerror = () => {
+                  // Hide the image and show placeholder after retry fails
+                  img.style.display = 'none'
+                  img.onerror = null
+                  const placeholder = img.parentElement?.querySelector('.image-placeholder') as HTMLElement
+                  if (placeholder) {
+                    placeholder.style.display = 'flex'
+                  }
+                }
+                newImg.src = imageUrl
+                return
+              }
+              
               // Hide the image and show placeholder
               img.style.display = 'none'
               img.onerror = null
