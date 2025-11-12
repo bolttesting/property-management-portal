@@ -166,6 +166,7 @@ app.use('/uploads', (req, res, next) => {
   maxAge: '1d', // Cache for 1 day
   etag: true,
   lastModified: true,
+  fallthrough: false, // Don't continue to next middleware if file not found
   setHeaders: (res, filePath) => {
     // Set proper content type for images
     if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
@@ -188,6 +189,21 @@ app.use('/uploads', (req, res, next) => {
     }
   }
 }));
+
+// Handle 404 for missing images - return a proper 404 response
+app.use('/uploads', (req, res) => {
+  // Only handle image requests that failed
+  if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(req.path)) {
+    console.warn(`⚠️  Image not found: ${req.path}`);
+    res.status(404).json({
+      error: 'Image not found',
+      message: 'The requested image file does not exist. It may have been deleted or the storage volume may not be configured.',
+      path: req.path
+    });
+  } else {
+    res.status(404).json({ error: 'File not found', path: req.path });
+  }
+});
 
 // Body parsing middleware - Skip for upload routes (multer needs raw multipart/form-data)
 // Only parse JSON/URL-encoded for non-upload routes
@@ -251,6 +267,39 @@ app.use(`/api/${API_VERSION}/owner`, ownerRoutes);
 app.use(`/api/${API_VERSION}/admin`, adminRoutes);
 app.use(`/api/${API_VERSION}/upload`, uploadRoutes);
 app.use(`/api/${API_VERSION}/contact`, contactRoutes);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  const fs = require('fs');
+  const uploadDir = process.env.UPLOAD_DIR || 
+    (process.env.RAILWAY_VOLUME_MOUNT_PATH ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'uploads') : './uploads');
+  const resolvedUploadDir = path.resolve(uploadDir);
+  const imagesDir = path.join(resolvedUploadDir, 'images');
+  
+  const storageInfo = {
+    uploadDir: resolvedUploadDir,
+    imagesDir: imagesDir,
+    exists: fs.existsSync(resolvedUploadDir),
+    writable: false,
+    railwayVolume: process.env.RAILWAY_VOLUME_MOUNT_PATH || null,
+    uploadDirEnv: process.env.UPLOAD_DIR || null
+  };
+  
+  try {
+    // Check if directory is writable
+    fs.accessSync(resolvedUploadDir, fs.constants.W_OK);
+    storageInfo.writable = true;
+  } catch (error) {
+    storageInfo.writable = false;
+  }
+  
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    storage: storageInfo,
+    database: 'connected' // You can enhance this to check DB connection
+  });
+});
 
 // Debug: Log all registered routes
 if (process.env.NODE_ENV === 'development') {
