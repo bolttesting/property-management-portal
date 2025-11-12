@@ -272,31 +272,6 @@ app.get('/health', (req, res) => {
   const host = req.get('host');
   const baseUrl = `${protocol}://${host}`;
   
-  const storageInfo = {
-    uploadDir: resolvedUploadDir,
-    imagesDir: imagesDir,
-    exists: fs.existsSync(resolvedUploadDir),
-    writable: false,
-    railwayVolume: process.env.RAILWAY_VOLUME_MOUNT_PATH || null,
-    uploadDirEnv: process.env.UPLOAD_DIR || null,
-    // Add helpful links
-    links: {
-      uploads: `${baseUrl}/uploads`,
-      images: `${baseUrl}/uploads/images`,
-      documents: `${baseUrl}/uploads/documents`,
-      api: `${baseUrl}/api/${API_VERSION}`,
-      health: `${baseUrl}/health`
-    }
-  };
-  
-  try {
-    // Check if directory is writable
-    fs.accessSync(resolvedUploadDir, fs.constants.W_OK);
-    storageInfo.writable = true;
-  } catch (error) {
-    storageInfo.writable = false;
-  }
-  
   // Count files in images directory (if it exists)
   let imageCount = 0;
   if (fs.existsSync(imagesDir)) {
@@ -307,7 +282,48 @@ app.get('/health', (req, res) => {
       // Ignore errors reading directory
     }
   }
-  storageInfo.imageCount = imageCount;
+  
+  let isWritable = false;
+  try {
+    // Check if directory is writable
+    fs.accessSync(resolvedUploadDir, fs.constants.W_OK);
+    isWritable = true;
+  } catch (error) {
+    isWritable = false;
+  }
+  
+  const storageInfo: {
+    uploadDir: string;
+    imagesDir: string;
+    exists: boolean;
+    writable: boolean;
+    railwayVolume: string | null;
+    uploadDirEnv: string | null;
+    imageCount: number;
+    links: {
+      uploads: string;
+      images: string;
+      documents: string;
+      api: string;
+      health: string;
+    };
+  } = {
+    uploadDir: resolvedUploadDir,
+    imagesDir: imagesDir,
+    exists: fs.existsSync(resolvedUploadDir),
+    writable: isWritable,
+    railwayVolume: process.env.RAILWAY_VOLUME_MOUNT_PATH || null,
+    uploadDirEnv: process.env.UPLOAD_DIR || null,
+    imageCount: imageCount,
+    // Add helpful links
+    links: {
+      uploads: `${baseUrl}/uploads`,
+      images: `${baseUrl}/uploads/images`,
+      documents: `${baseUrl}/uploads/documents`,
+      api: `${baseUrl}/api/${API_VERSION}`,
+      health: `${baseUrl}/health`
+    }
+  };
   
   res.json({
     status: 'ok',
