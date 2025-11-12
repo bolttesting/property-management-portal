@@ -6,20 +6,33 @@ import { v4 as uuidv4 } from 'uuid';
 import { AppError } from '../middleware/errorHandler';
 
 // Ensure upload directory exists
-const uploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads');
-const imagesDir = path.join(uploadDir, 'images');
-const documentsDir = path.join(uploadDir, 'documents');
+// Use Railway Volume if available, otherwise use local storage
+// Railway Volumes are mounted at /data by default
+const uploadDir = process.env.UPLOAD_DIR || 
+  (process.env.RAILWAY_VOLUME_MOUNT_PATH ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'uploads') : './uploads');
+const resolvedUploadDir = path.resolve(uploadDir);
+const imagesDir = path.join(resolvedUploadDir, 'images');
+const documentsDir = path.join(resolvedUploadDir, 'documents');
 
-[uploadDir, imagesDir, documentsDir].forEach((dir) => {
+[resolvedUploadDir, imagesDir, documentsDir].forEach((dir) => {
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    console.log(`Created upload directory: ${dir}`);
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`✅ Created upload directory: ${dir}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to create upload directory: ${dir}`, error.message);
+      // Don't throw - let the application continue, but log the error
+    }
+  } else {
+    console.log(`✅ Upload directory exists: ${dir}`);
   }
 });
 
-console.log(`Upload directories configured:
+console.log(`📁 Upload directories configured:
+  - Base: ${resolvedUploadDir}
   - Images: ${imagesDir}
-  - Documents: ${documentsDir}`);
+  - Documents: ${documentsDir}
+  - Railway Volume: ${process.env.RAILWAY_VOLUME_MOUNT_PATH || 'Not configured (using local storage)'}`);
 
 // Configure multer for images
 const imageStorage = multer.diskStorage({

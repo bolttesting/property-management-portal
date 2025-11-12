@@ -128,9 +128,13 @@ if (!disableRateLimit) {
 
 // Serve static files (uploaded images and documents)
 // This must come BEFORE body parsers to avoid conflicts
-const uploadsPath = path.join(__dirname, '../uploads');
-console.log('Serving static files from:', uploadsPath);
-console.log('Static files will be available at: http://localhost:5000/uploads/...');
+// Use Railway Volume if available, otherwise use local storage
+const uploadDir = process.env.UPLOAD_DIR || 
+  (process.env.RAILWAY_VOLUME_MOUNT_PATH ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'uploads') : './uploads');
+const uploadsPath = path.resolve(uploadDir);
+console.log('📁 Serving static files from:', uploadsPath);
+console.log('🌐 Static files will be available at: /uploads/...');
+console.log('💾 Railway Volume:', process.env.RAILWAY_VOLUME_MOUNT_PATH || 'Not configured (ephemeral storage)');
 
 // Serve static files with proper CORS headers
 // IMPORTANT: This must come BEFORE the general CORS middleware to ensure proper headers
