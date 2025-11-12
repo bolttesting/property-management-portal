@@ -168,13 +168,21 @@ export default function PropertyDetailsPage() {
   // Helper function to get image URL
   const getImageUrl = (imageUrl: string | undefined | null): string => {
     if (!imageUrl) return ''
-    // If URL already includes http, return as is
+    // If URL already includes http/https, return as is
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       return imageUrl
     }
     // Otherwise, prepend backend URL
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:5000'
-    return `${backendUrl}${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+    let backendUrl = apiUrl.replace('/api/v1', '').trim()
+    if (!backendUrl) {
+      backendUrl = 'http://localhost:5000'
+    }
+    // Ensure backend URL doesn't end with slash
+    backendUrl = backendUrl.replace(/\/$/, '')
+    // Ensure image path starts with slash
+    const imagePath = imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl
+    return `${backendUrl}${imagePath}`
   }
 
   const primaryImage = images.find((img: any) => img.is_primary) || images[0]
@@ -446,16 +454,26 @@ export default function PropertyDetailsPage() {
                       src={getImageUrl(images[selectedImageIndex]?.image_url || primaryImage?.image_url || images[0]?.image_url)}
                       alt={property.property_name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      loading="eager"
+                      crossOrigin="anonymous"
+                      decoding="async"
+                      referrerPolicy="no-referrer-when-downgrade"
                       onError={(e) => {
+                        const img = e.currentTarget
+                        // If crossOrigin failed, try without it (iOS Safari fallback)
+                        if (img.crossOrigin && img.crossOrigin !== '') {
+                          console.warn('Main image: Failed with crossOrigin, retrying without it:', img.src)
+                          img.crossOrigin = ''
+                          img.src = img.src // Force reload
+                          return
+                        }
                         console.error('Main image load error:', {
-                          attemptedUrl: e.currentTarget.src,
+                          attemptedUrl: img.src,
                           imageUrl: images[selectedImageIndex]?.image_url || primaryImage?.image_url || images[0]?.image_url,
                           imagesArray: images
                         })
                         // Don't hide the image on mobile - show a fallback background
-                        e.currentTarget.style.opacity = '0.5'
-                        e.currentTarget.onerror = null
+                        img.style.opacity = '0.5'
+                        img.onerror = null
                       }}
                       onLoad={(e) => {
                         console.log('Main image loaded successfully:', e.currentTarget.src)
@@ -505,16 +523,26 @@ export default function PropertyDetailsPage() {
                               src={getImageUrl(img.image_url)}
                               alt={`${property.property_name} ${index + 1}`}
                               className="w-full h-full object-cover"
-                              loading="lazy"
+                              crossOrigin="anonymous"
+                              decoding="async"
+                              referrerPolicy="no-referrer-when-downgrade"
                               onError={(e) => {
+                                const imgEl = e.currentTarget
+                                // If crossOrigin failed, try without it (iOS Safari fallback)
+                                if (imgEl.crossOrigin && imgEl.crossOrigin !== '') {
+                                  console.warn('Thumbnail: Failed with crossOrigin, retrying without it:', imgEl.src)
+                                  imgEl.crossOrigin = ''
+                                  imgEl.src = imgEl.src // Force reload
+                                  return
+                                }
                                 console.error('Thumbnail load error:', {
-                                  attemptedUrl: e.currentTarget.src,
+                                  attemptedUrl: imgEl.src,
                                   imageUrl: img.image_url,
                                   imageId: img.id
                                 })
                                 // Show a placeholder instead of hiding
-                                e.currentTarget.style.opacity = '0.3'
-                                e.currentTarget.onerror = null
+                                imgEl.style.opacity = '0.3'
+                                imgEl.onerror = null
                               }}
                               onLoad={(e) => {
                                 console.log('Thumbnail loaded successfully:', e.currentTarget.src)

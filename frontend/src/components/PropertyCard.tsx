@@ -32,15 +32,22 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       console.log('PropertyCard: No image URL provided')
       return ''
     }
-    // If URL already includes http, return as is
+    // If URL already includes http/https, return as is
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       console.log('PropertyCard: Image URL already absolute:', imageUrl)
       return imageUrl
     }
     // Otherwise, prepend backend URL
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
-    const backendUrl = apiUrl.replace('/api/v1', '') || 'http://localhost:5000'
-    const fullUrl = `${backendUrl}${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`
+    let backendUrl = apiUrl.replace('/api/v1', '').trim()
+    if (!backendUrl) {
+      backendUrl = 'http://localhost:5000'
+    }
+    // Ensure backend URL doesn't end with slash
+    backendUrl = backendUrl.replace(/\/$/, '')
+    // Ensure image path starts with slash
+    const imagePath = imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl
+    const fullUrl = `${backendUrl}${imagePath}`
     console.log('PropertyCard: Constructed image URL:', {
       original: imageUrl,
       apiUrl,
@@ -59,18 +66,28 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             src={getImageUrl(property.primary_image)}
             alt={property.property_name}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-            loading="lazy"
+            crossOrigin="anonymous"
+            decoding="async"
+            referrerPolicy="no-referrer-when-downgrade"
             onError={(e) => {
+              const img = e.currentTarget
+              // If crossOrigin failed, try without it (iOS Safari fallback)
+              if (img.crossOrigin && img.crossOrigin !== '') {
+                console.warn('PropertyCard: Image failed with crossOrigin, retrying without it:', img.src)
+                img.crossOrigin = ''
+                img.src = img.src // Force reload
+                return
+              }
               console.error('PropertyCard image load error:', {
-                attemptedUrl: e.currentTarget.src,
+                attemptedUrl: img.src,
                 imageUrl: property.primary_image,
                 propertyId: property.id,
                 error: 'Image failed to load'
               })
               // Hide the image and show placeholder
-              e.currentTarget.style.display = 'none'
-              e.currentTarget.onerror = null
-              const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder') as HTMLElement
+              img.style.display = 'none'
+              img.onerror = null
+              const placeholder = img.parentElement?.querySelector('.image-placeholder') as HTMLElement
               if (placeholder) {
                 placeholder.style.display = 'flex'
               }
