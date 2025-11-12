@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import { MapPin, Bed, Bath, Car, Heart, Share2, ArrowLeft, Calendar, Ruler, ChevronLeft, ChevronRight, Phone, Mail, X, User, Home, MessageCircle, FileText, CheckCircle, Video, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
+import { getImageUrl, handleImageError, handleImageLoad } from '@/utils/imageUtils'
 
 export default function PropertyDetailsPage() {
   const params = useParams()
@@ -165,42 +166,6 @@ export default function PropertyDetailsPage() {
     return Boolean(val)
   }
 
-  // Helper function to get image URL
-  const getImageUrl = (imageUrl: string | undefined | null): string => {
-    if (!imageUrl) return ''
-    // If URL already includes http/https, return as is
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      return imageUrl
-    }
-    // Otherwise, prepend backend URL
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
-    let backendUrl = apiUrl.replace('/api/v1', '').trim()
-    if (!backendUrl) {
-      backendUrl = 'http://localhost:5000'
-    }
-    // Ensure backend URL doesn't end with slash
-    backendUrl = backendUrl.replace(/\/$/, '')
-    // Ensure image path starts with slash
-    const imagePath = imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl
-    const fullUrl = `${backendUrl}${imagePath}`
-    
-    // Log for debugging (especially useful for iOS)
-    if (typeof window !== 'undefined') {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-      if (isIOS) {
-        console.log('PropertyDetails [iOS]: Constructed image URL:', {
-          original: imageUrl,
-          apiUrl,
-          backendUrl,
-          fullUrl,
-          isHTTPS: fullUrl.startsWith('https://')
-        })
-      }
-    }
-    
-    return fullUrl
-  }
 
   const primaryImage = images.find((img: any) => img.is_primary) || images[0]
 
@@ -474,39 +439,35 @@ export default function PropertyDetailsPage() {
                       decoding="async"
                       loading="eager"
                       fetchPriority="high"
+                      referrerPolicy="no-referrer-when-downgrade"
                       onError={(e) => {
-                        const img = e.currentTarget
-                        const imageUrl = getImageUrl(images[selectedImageIndex]?.image_url || primaryImage?.image_url || images[0]?.image_url)
-                        console.error('Main image load error:', {
-                          attemptedUrl: img.src,
-                          imageUrl: images[selectedImageIndex]?.image_url || primaryImage?.image_url || images[0]?.image_url,
-                          constructedUrl: imageUrl,
-                          imagesArray: images,
-                          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
-                        })
-                        
-                        // Try reloading the image once (iOS Safari sometimes needs a retry)
-                        if (!img.dataset.retried) {
-                          img.dataset.retried = 'true'
+                        const imageUrl = images[selectedImageIndex]?.image_url || primaryImage?.image_url || images[0]?.image_url
+                        handleImageError(e, imageUrl, (url) => {
+                          const img = e.currentTarget
+                          // Add cache-busting parameter for Safari retry
+                          const retryUrl = url + (url.includes('?') ? '&' : '?') + '_retry=' + Date.now()
+                          
                           const newImg = new Image()
+                          newImg.referrerPolicy = 'no-referrer-when-downgrade'
                           newImg.onload = () => {
-                            img.src = imageUrl
+                            img.src = retryUrl
                             img.style.opacity = '1'
                           }
                           newImg.onerror = () => {
                             img.style.opacity = '0.5'
                             img.onerror = null
                           }
-                          newImg.src = imageUrl
-                          return
-                        }
+                          newImg.src = retryUrl
+                        })
                         
                         // Don't hide the image on mobile - show a fallback background
-                        img.style.opacity = '0.5'
-                        img.onerror = null
+                        const img = e.currentTarget
+                        if (img.dataset.retried === 'true') {
+                          img.style.opacity = '0.5'
+                        }
                       }}
                       onLoad={(e) => {
-                        console.log('Main image loaded successfully:', e.currentTarget.src)
+                        handleImageLoad(e)
                         e.currentTarget.style.opacity = '1'
                       }}
                     />
@@ -554,20 +515,32 @@ export default function PropertyDetailsPage() {
                               alt={`${property.property_name} ${index + 1}`}
                               className="w-full h-full object-cover"
                               decoding="async"
+                              referrerPolicy="no-referrer-when-downgrade"
                               onError={(e) => {
-                                const imgEl = e.currentTarget
-                                console.error('Thumbnail load error:', {
-                                  attemptedUrl: imgEl.src,
-                                  imageUrl: img.image_url,
-                                  imageId: img.id,
-                                  userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+                                handleImageError(e, img.image_url, (url) => {
+                                  const imgEl = e.currentTarget
+                                  // Add cache-busting parameter for Safari retry
+                                  const retryUrl = url + (url.includes('?') ? '&' : '?') + '_retry=' + Date.now()
+                                  const newImg = new Image()
+                                  newImg.referrerPolicy = 'no-referrer-when-downgrade'
+                                  newImg.onload = () => {
+                                    imgEl.src = retryUrl
+                                    imgEl.style.opacity = '1'
+                                  }
+                                  newImg.onerror = () => {
+                                    imgEl.style.opacity = '0.3'
+                                    imgEl.onerror = null
+                                  }
+                                  newImg.src = retryUrl
                                 })
                                 // Show a placeholder instead of hiding
-                                imgEl.style.opacity = '0.3'
-                                imgEl.onerror = null
+                                const imgEl = e.currentTarget
+                                if (imgEl.dataset.retried === 'true') {
+                                  imgEl.style.opacity = '0.3'
+                                }
                               }}
                               onLoad={(e) => {
-                                console.log('Thumbnail loaded successfully:', e.currentTarget.src)
+                                handleImageLoad(e)
                                 e.currentTarget.style.opacity = '1'
                               }}
                             />

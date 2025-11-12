@@ -2,12 +2,31 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['localhost'],
+    domains: [
+      'localhost',
+      'property-management-portal-production.up.railway.app',
+      'property-management-backend-production.up.railway.app',
+    ],
     remotePatterns: [
       {
         protocol: 'http',
         hostname: 'localhost',
         port: '5000',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'property-management-portal-production.up.railway.app',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'property-management-backend-production.up.railway.app',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.up.railway.app',
         pathname: '/uploads/**',
       },
     ],

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { MapPin, Bed, Bath, Heart, Share2, Car } from 'lucide-react'
+import { getImageUrl, handleImageError, handleImageLoad } from '@/utils/imageUtils'
 
 interface PropertyCardProps {
   property: {
@@ -26,46 +27,6 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     unavailable: 'bg-text-tertiary text-white',
   }
 
-  // Helper function to get image URL
-  const getImageUrl = (imageUrl: string | undefined | null): string => {
-    if (!imageUrl) {
-      console.log('PropertyCard: No image URL provided')
-      return ''
-    }
-    // If URL already includes http/https, return as is
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      console.log('PropertyCard: Image URL already absolute:', imageUrl)
-      return imageUrl
-    }
-    // Otherwise, prepend backend URL
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
-    let backendUrl = apiUrl.replace('/api/v1', '').trim()
-    if (!backendUrl) {
-      backendUrl = 'http://localhost:5000'
-    }
-    // Ensure backend URL doesn't end with slash
-    backendUrl = backendUrl.replace(/\/$/, '')
-    // Ensure image path starts with slash
-    const imagePath = imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl
-    const fullUrl = `${backendUrl}${imagePath}`
-    
-    // Log for debugging (especially useful for iOS)
-    if (typeof window !== 'undefined') {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-      if (isIOS) {
-        console.log('PropertyCard [iOS]: Constructed image URL:', {
-          original: imageUrl,
-          apiUrl,
-          backendUrl,
-          fullUrl,
-          isHTTPS: fullUrl.startsWith('https://')
-        })
-      }
-    }
-    
-    return fullUrl
-  }
 
   return (
     <div className="property-card fade-in">
@@ -79,25 +40,19 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             decoding="async"
             loading="eager"
             fetchPriority="high"
+            referrerPolicy="no-referrer-when-downgrade"
             onError={(e) => {
-              const img = e.currentTarget
-              const imageUrl = getImageUrl(property.primary_image)
-              console.error('PropertyCard image load error:', {
-                attemptedUrl: img.src,
-                imageUrl: property.primary_image,
-                constructedUrl: imageUrl,
-                propertyId: property.id,
-                error: 'Image failed to load',
-                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
-              })
-              
-              // Try reloading the image once (iOS Safari sometimes needs a retry)
-              if (!img.dataset.retried) {
-                img.dataset.retried = 'true'
+              handleImageError(e, property.primary_image, (url) => {
+                const img = e.currentTarget
+                // Add cache-busting parameter for Safari retry
+                const retryUrl = url + (url.includes('?') ? '&' : '?') + '_retry=' + Date.now()
+                
                 const newImg = new Image()
+                newImg.referrerPolicy = 'no-referrer-when-downgrade'
                 newImg.onload = () => {
-                  img.src = imageUrl
+                  img.src = retryUrl
                   img.style.display = ''
+                  img.style.opacity = '1'
                 }
                 newImg.onerror = () => {
                   // Hide the image and show placeholder after retry fails
@@ -108,25 +63,27 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                     placeholder.style.display = 'flex'
                   }
                 }
-                newImg.src = imageUrl
-                return
-              }
+                newImg.src = retryUrl
+              })
               
-              // Hide the image and show placeholder
-              img.style.display = 'none'
-              img.onerror = null
-              const placeholder = img.parentElement?.querySelector('.image-placeholder') as HTMLElement
-              if (placeholder) {
-                placeholder.style.display = 'flex'
+              // Hide the image and show placeholder if retry failed or not attempted
+              const img = e.currentTarget
+              if (img.dataset.retried === 'true') {
+                img.style.display = 'none'
+                const placeholder = img.parentElement?.querySelector('.image-placeholder') as HTMLElement
+                if (placeholder) {
+                  placeholder.style.display = 'flex'
+                }
               }
             }}
             onLoad={(e) => {
-              console.log('PropertyCard image loaded successfully:', e.currentTarget.src)
+              handleImageLoad(e)
               // Hide placeholder when image loads
               const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder') as HTMLElement
               if (placeholder) {
                 placeholder.style.display = 'none'
               }
+              e.currentTarget.style.opacity = '1'
             }}
           />
         ) : null}
