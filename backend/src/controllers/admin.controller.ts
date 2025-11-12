@@ -936,7 +936,7 @@ export const cleanupOrphanedImages = async (
     const imagesDir = path.join(resolvedUploadDir, 'images');
 
     if (!fs.existsSync(imagesDir)) {
-      return res.json({
+      res.json({
         success: true,
         message: 'Images directory does not exist',
         data: {
@@ -944,6 +944,7 @@ export const cleanupOrphanedImages = async (
           orphanedFiles: [],
         },
       });
+      return;
     }
 
     // Get all files in images directory
