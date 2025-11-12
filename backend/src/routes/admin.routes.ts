@@ -38,5 +38,9 @@ router.get('/tenants', adminController.getAllTenants);
 router.get('/reports/financial', adminController.getFinancialReports);
 router.get('/reports/properties', adminController.getPropertyReports);
 
+// Image Cleanup (Admin only)
+router.post('/cleanup/orphaned-images', adminController.cleanupOrphanedImages);
+router.post('/cleanup/all-images', adminController.clearAllPropertyImages);
+
 export default router;
 

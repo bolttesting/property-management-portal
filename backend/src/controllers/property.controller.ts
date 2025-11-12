@@ -786,12 +786,53 @@ export const deleteProperty = async (
       throw new AppError('Cannot delete property with active lease', 400);
     }
 
-    // Delete property (cascade will handle related records)
+    // Get all images for this property
+    const imagesResult = await query(
+      'SELECT image_url FROM property_images WHERE property_id = $1',
+      [id]
+    );
+
+    // Delete image files from filesystem
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Get upload directory
+    const uploadDir = process.env.UPLOAD_DIR || 
+      (process.env.RAILWAY_VOLUME_MOUNT_PATH ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'uploads') : './uploads');
+    const resolvedUploadDir = path.resolve(uploadDir);
+    const imagesDir = path.join(resolvedUploadDir, 'images');
+
+    let deletedFiles = 0;
+    for (const image of imagesResult.rows) {
+      const imageUrl = image.image_url;
+      // Extract filename from image_url
+      let filename = imageUrl;
+      if (imageUrl.includes('/')) {
+        filename = path.basename(imageUrl);
+      }
+      
+      const imagePath = path.join(imagesDir, filename);
+      if (fs.existsSync(imagePath)) {
+        try {
+          fs.unlinkSync(imagePath);
+          deletedFiles++;
+          console.log(`✅ Deleted image file: ${imagePath}`);
+        } catch (fileError: any) {
+          console.warn(`⚠️  Failed to delete image file: ${imagePath}`, fileError.message);
+          // Continue even if file deletion fails
+        }
+      }
+    }
+
+    // Delete property (cascade will handle related records including property_images)
     await query('DELETE FROM properties WHERE id = $1', [id]);
 
     res.json({
       success: true,
-      message: 'Property deleted successfully',
+      message: `Property deleted successfully. ${deletedFiles} image file(s) deleted.`,
+      data: {
+        deletedFiles,
+      },
     });
   } catch (error) {
     next(error);
@@ -977,6 +1018,94 @@ export const addPropertyImages = async (
       data: {
         images: insertedImages,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete Property Image (Protected)
+export const deletePropertyImage = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw new AppError('Not authenticated', 401);
+    }
+
+    const { id: propertyId, imageId } = req.params;
+
+    if (!imageId) {
+      throw new AppError('Image ID is required', 400);
+    }
+
+    // Verify property exists and user has permission
+    const propertyResult = await query('SELECT * FROM properties WHERE id = $1', [propertyId]);
+    if (propertyResult.rows.length === 0) {
+      throw new AppError('Property not found', 404);
+    }
+
+    const property = propertyResult.rows[0];
+
+    // Verify authorization
+    if (req.user.userType === 'owner') {
+      const ownerResult = await query('SELECT id FROM owners WHERE user_id = $1', [req.user.id]);
+      if (ownerResult.rows.length === 0 || property.owner_id !== ownerResult.rows[0].id) {
+        throw new AppError('Unauthorized', 403);
+      }
+    } else if (req.user.userType !== 'admin') {
+      throw new AppError('Unauthorized', 403);
+    }
+
+    // Get image record
+    const imageResult = await query(
+      'SELECT * FROM property_images WHERE id = $1 AND property_id = $2',
+      [imageId, propertyId]
+    );
+
+    if (imageResult.rows.length === 0) {
+      throw new AppError('Image not found', 404);
+    }
+
+    const image = imageResult.rows[0];
+    const imageUrl = image.image_url;
+
+    // Delete the file from filesystem
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Extract filename from image_url (could be /uploads/images/filename.jpg or just filename.jpg)
+    let filename = imageUrl;
+    if (imageUrl.includes('/')) {
+      filename = path.basename(imageUrl);
+    }
+
+    // Get upload directory
+    const uploadDir = process.env.UPLOAD_DIR || 
+      (process.env.RAILWAY_VOLUME_MOUNT_PATH ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'uploads') : './uploads');
+    const resolvedUploadDir = path.resolve(uploadDir);
+    const imagesDir = path.join(resolvedUploadDir, 'images');
+    const imagePath = path.join(imagesDir, filename);
+
+    // Delete file if it exists
+    if (fs.existsSync(imagePath)) {
+      try {
+        fs.unlinkSync(imagePath);
+        console.log(`✅ Deleted image file: ${imagePath}`);
+      } catch (fileError: any) {
+        console.warn(`⚠️  Failed to delete image file: ${imagePath}`, fileError.message);
+        // Continue even if file deletion fails
+      }
+    }
+
+    // Delete image record from database
+    await query('DELETE FROM property_images WHERE id = $1', [imageId]);
+
+    res.json({
+      success: true,
+      message: 'Image deleted successfully',
     });
   } catch (error) {
     next(error);

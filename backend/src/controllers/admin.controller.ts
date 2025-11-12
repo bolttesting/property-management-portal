@@ -914,3 +914,156 @@ export const getPropertyReports = async (
     next(error);
   }
 };
+
+// Cleanup Orphaned Images (Admin only)
+export const cleanupOrphanedImages = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user || req.user.userType !== 'admin') {
+      throw new AppError('Unauthorized', 403);
+    }
+
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Get upload directory
+    const uploadDir = process.env.UPLOAD_DIR || 
+      (process.env.RAILWAY_VOLUME_MOUNT_PATH ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'uploads') : './uploads');
+    const resolvedUploadDir = path.resolve(uploadDir);
+    const imagesDir = path.join(resolvedUploadDir, 'images');
+
+    if (!fs.existsSync(imagesDir)) {
+      return res.json({
+        success: true,
+        message: 'Images directory does not exist',
+        data: {
+          deletedFiles: 0,
+          orphanedFiles: [],
+        },
+      });
+    }
+
+    // Get all files in images directory
+    const files = fs.readdirSync(imagesDir);
+    const imageFiles = files.filter((file: string) => 
+      /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file)
+    );
+
+    // Get all image URLs from database
+    const dbImagesResult = await query('SELECT image_url FROM property_images');
+    const dbImageUrls = dbImagesResult.rows.map((row: any) => row.image_url);
+    
+    // Extract filenames from database URLs
+    const dbFilenames = dbImageUrls.map((url: string) => {
+      if (url.includes('/')) {
+        return path.basename(url);
+      }
+      return url;
+    });
+
+    // Find orphaned files (files that exist but don't have database records)
+    const orphanedFiles: string[] = [];
+    let deletedFiles = 0;
+
+    for (const file of imageFiles) {
+      if (!dbFilenames.includes(file)) {
+        orphanedFiles.push(file);
+        const filePath = path.join(imagesDir, file);
+        try {
+          fs.unlinkSync(filePath);
+          deletedFiles++;
+          console.log(`✅ Deleted orphaned image: ${filePath}`);
+        } catch (fileError: any) {
+          console.warn(`⚠️  Failed to delete orphaned image: ${filePath}`, fileError.message);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Cleanup completed. ${deletedFiles} orphaned image(s) deleted.`,
+      data: {
+        totalFiles: imageFiles.length,
+        dbRecords: dbFilenames.length,
+        orphanedFiles: orphanedFiles.length,
+        deletedFiles,
+        orphanedFileNames: orphanedFiles,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Clear All Property Images (Admin only) - USE WITH CAUTION
+export const clearAllPropertyImages = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user || req.user.userType !== 'admin') {
+      throw new AppError('Unauthorized', 403);
+    }
+
+    // Get confirmation from request body
+    const { confirm } = req.body;
+    if (!confirm || confirm !== 'true') {
+      throw new AppError('Confirmation required. Set confirm=true in request body.', 400);
+    }
+
+    // Get all images from database
+    const imagesResult = await query('SELECT image_url FROM property_images');
+    
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Get upload directory
+    const uploadDir = process.env.UPLOAD_DIR || 
+      (process.env.RAILWAY_VOLUME_MOUNT_PATH ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'uploads') : './uploads');
+    const resolvedUploadDir = path.resolve(uploadDir);
+    const imagesDir = path.join(resolvedUploadDir, 'images');
+
+    let deletedFiles = 0;
+    const deletedFileNames: string[] = [];
+
+    // Delete all image files
+    for (const image of imagesResult.rows) {
+      const imageUrl = image.image_url;
+      let filename = imageUrl;
+      if (imageUrl.includes('/')) {
+        filename = path.basename(imageUrl);
+      }
+      
+      const imagePath = path.join(imagesDir, filename);
+      if (fs.existsSync(imagePath)) {
+        try {
+          fs.unlinkSync(imagePath);
+          deletedFiles++;
+          deletedFileNames.push(filename);
+          console.log(`✅ Deleted image file: ${imagePath}`);
+        } catch (fileError: any) {
+          console.warn(`⚠️  Failed to delete image file: ${imagePath}`, fileError.message);
+        }
+      }
+    }
+
+    // Delete all image records from database
+    await query('DELETE FROM property_images');
+
+    res.json({
+      success: true,
+      message: `All property images cleared. ${deletedFiles} file(s) deleted from filesystem, all database records deleted.`,
+      data: {
+        deletedFiles,
+        deletedFileNames,
+        deletedRecords: imagesResult.rows.length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

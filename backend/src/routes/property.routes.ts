@@ -15,6 +15,7 @@ router.post('/', authenticate, propertyController.createProperty);
 router.put('/:id', authenticate, propertyController.updateProperty);
 router.delete('/:id', authenticate, propertyController.deleteProperty);
 router.post('/:id/images', authenticate, propertyController.addPropertyImages);
+router.delete('/:id/images/:imageId', authenticate, propertyController.deletePropertyImage);
 router.post('/:id/favorite', authenticate, propertyController.addToFavorites);
 router.delete('/:id/favorite', authenticate, propertyController.removeFromFavorites);
 router.get('/favorites/list', authenticate, propertyController.getFavoriteProperties);
